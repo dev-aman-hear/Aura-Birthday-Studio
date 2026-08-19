@@ -1,0 +1,8 @@
+/**
+ * Birthday Studio - Creator Onboarding CSS (Section 1)
+ */
+
+#creatorOnboardingModalRoot .wizard-modal {
+  border: 1px solid var(--accent);
+  box-shadow: 0 12px 36px rgba(127, 90, 240, 0.25);
+}

@@ -1,0 +1,1228 @@
+/**
+ * Birthday Studio - Modern Wish Wall & Creator Moderation Stylesheet
+ * Supports Multiple Themes (Glassmorphism, Sticky Notes Pinboard, Midnight Gold, Festive Neon, Clean Minimal)
+ * Dynamic Responsive Layouts (Grid, Masonry, Pinboard, Spotlight), Interactive Reaction Pills, and Moderation Studio
+ */
+
+/* ==========================================================================
+   1. WISH WALL SCENE CONTAINER & THEMES
+   ========================================================================== */
+
+.wish-wall-scene-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 36px 24px;
+  min-height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: var(--text-main, #ffffff);
+  background: radial-gradient(circle at 50% 15%, rgba(127, 90, 240, 0.18) 0%, transparent 65%),
+              linear-gradient(145deg, #141224 0%, #0a0914 100%);
+  transition: background 0.4s ease;
+}
+
+/* Background Ambience Overlays */
+.wish-wall-ambience-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.ambient-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatParticle 8s infinite ease-in-out;
+}
+
+@keyframes floatParticle {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.2; }
+  50% { transform: translateY(-30px) rotate(180deg); opacity: 0.7; }
+}
+
+/* Theme 1: Glassmorphism (Default) */
+.theme-wall-glassmorphic {
+  background: radial-gradient(circle at 30% 20%, rgba(127, 90, 240, 0.22) 0%, transparent 55%),
+              radial-gradient(circle at 75% 60%, rgba(247, 37, 133, 0.18) 0%, transparent 50%),
+              linear-gradient(145deg, #131124 0%, #0b0a14 100%);
+}
+
+/* Theme 2: Sticky Notes Pinboard */
+.theme-wall-sticky-notes {
+  background: radial-gradient(circle at 50% 30%, rgba(255, 193, 7, 0.08) 0%, transparent 70%),
+              linear-gradient(135deg, #1f1d24 0%, #15131a 100%);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Theme 3: Midnight & Gold */
+.theme-wall-midnight-gold {
+  background: radial-gradient(circle at 50% 10%, rgba(212, 175, 55, 0.15) 0%, transparent 60%),
+              linear-gradient(150deg, #0f0f14 0%, #060608 100%);
+}
+
+/* Theme 4: Festive Neon */
+.theme-wall-festive-neon {
+  background: radial-gradient(circle at 20% 20%, rgba(0, 242, 254, 0.18) 0%, transparent 50%),
+              radial-gradient(circle at 80% 30%, rgba(254, 83, 186, 0.2) 0%, transparent 50%),
+              linear-gradient(145deg, #120e24 0%, #080612 100%);
+}
+
+/* Theme 5: Clean Minimal */
+.theme-wall-clean-minimal {
+  background: linear-gradient(180deg, #18181f 0%, #101014 100%);
+}
+
+/* ==========================================================================
+   2. HEADER & COUNTER BADGE
+   ========================================================================== */
+
+.wish-wall-scene-header {
+  text-align: center;
+  margin-bottom: 28px;
+  z-index: 1;
+  max-width: 720px;
+  width: 100%;
+}
+
+.wish-wall-icon {
+  font-size: 3.2rem;
+  margin-bottom: 8px;
+  display: inline-block;
+  animation: floatBounce 3.2s infinite ease-in-out;
+  filter: drop-shadow(0 6px 14px rgba(127, 90, 240, 0.4));
+  user-select: none;
+}
+
+.wish-wall-title {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+  background: linear-gradient(90deg, #ffffff 0%, #f1f2f6 50%, #dcdde1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.theme-wall-glassmorphic .wish-wall-title {
+  background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 40%, #a1c4fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.theme-wall-midnight-gold .wish-wall-title {
+  background: linear-gradient(90deg, #f7d070 0%, #ffffff 40%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Cinzel', 'Playfair Display', serif;
+}
+
+.theme-wall-festive-neon .wish-wall-title {
+  background: linear-gradient(90deg, #00f2fe 0%, #4facfe 35%, #fe53bb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.wish-wall-subtitle {
+  font-size: 0.92rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.7));
+  margin-top: 6px;
+  line-height: 1.45;
+  max-width: 540px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wish-wall-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 6px 18px;
+  background: rgba(127, 90, 240, 0.15);
+  border: 1px solid rgba(127, 90, 240, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main, #ffffff);
+  box-shadow: 0 4px 16px rgba(127, 90, 240, 0.2);
+  animation: pulseGlow 3s infinite alternate;
+}
+
+.counter-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2cb67d;
+  box-shadow: 0 0 10px #2cb67d;
+  display: inline-block;
+  animation: pulseDot 1.8s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 4px 14px rgba(127, 90, 240, 0.2); }
+  100% { box-shadow: 0 6px 22px rgba(127, 90, 240, 0.45); }
+}
+
+/* ==========================================================================
+   3. WISH CARDS CONTAINERS & LAYOUTS
+   ========================================================================== */
+
+.wish-cards-container {
+  width: 100%;
+  max-width: 980px;
+  z-index: 1;
+  margin-bottom: 32px;
+}
+
+/* Grid Layout */
+.wish-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  width: 100%;
+}
+
+/* Masonry Layout */
+.wish-cards-masonry {
+  column-count: 3;
+  column-gap: 18px;
+  width: 100%;
+}
+
+.wish-cards-masonry .wish-card-item {
+  break-inside: avoid;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 840px) {
+  .wish-cards-masonry {
+    column-count: 2;
+  }
+}
+
+@media (max-width: 540px) {
+  .wish-cards-masonry {
+    column-count: 1;
+  }
+}
+
+/* Pinboard Layout */
+.wish-cards-pinboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 22px;
+  width: 100%;
+}
+
+.wish-cards-pinboard .wish-card-item:nth-child(3n+1) { transform: rotate(-1.5deg); }
+.wish-cards-pinboard .wish-card-item:nth-child(3n+2) { transform: rotate(1.2deg); }
+.wish-cards-pinboard .wish-card-item:nth-child(3n+3) { transform: rotate(-0.8deg); }
+.wish-cards-pinboard .wish-card-item:hover { transform: translateY(-4px) scale(1.02) rotate(0deg) !important; z-index: 10; }
+
+/* Spotlight Layout */
+.wish-cards-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 780px;
+}
+
+/* ==========================================================================
+   4. INDIVIDUAL WISH CARDS & VARIANTS
+   ========================================================================== */
+
+.wish-card-item {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.wish-card-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4), 0 0 18px rgba(127, 90, 240, 0.2);
+  border-color: rgba(127, 90, 240, 0.4);
+}
+
+/* Pinned Card Accent */
+.wish-card-item.is-pinned {
+  border-color: rgba(255, 215, 0, 0.6);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  box-shadow: 0 8px 26px rgba(255, 215, 0, 0.15);
+}
+
+.pinned-badge-chip {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Sticky Note Variant Styles */
+.theme-wall-sticky-notes .wish-card-item {
+  color: #2d3436;
+  border-radius: 4px;
+  padding: 22px 20px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+  border: none;
+}
+
+.theme-wall-sticky-notes .wish-card-item:before {
+  content: '📌';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.theme-wall-sticky-notes .wish-card-item:nth-child(5n+1) { background: #fff9c4; }
+.theme-wall-sticky-notes .wish-card-item:nth-child(5n+2) { background: #f8bbd0; }
+.theme-wall-sticky-notes .wish-card-item:nth-child(5n+3) { background: #c8e6c9; }
+.theme-wall-sticky-notes .wish-card-item:nth-child(5n+4) { background: #bbdefb; }
+.theme-wall-sticky-notes .wish-card-item:nth-child(5n+5) { background: #ffe0b2; }
+
+.theme-wall-sticky-notes .wish-card-item .wish-author { color: #1e272e; font-weight: 800; }
+.theme-wall-sticky-notes .wish-card-item .wish-message-body { color: #2d3436; font-size: 0.92rem; font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif; font-size: 1.05rem; }
+
+/* Midnight Gold Variant Styles */
+.theme-wall-midnight-gold .wish-card-item {
+  background: linear-gradient(145deg, #171620 0%, #101016 100%);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 12px;
+}
+
+.theme-wall-midnight-gold .wish-card-item:hover {
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 175, 55, 0.25);
+}
+
+.theme-wall-midnight-gold .wish-card-item .wish-author {
+  color: #f7d070;
+  font-family: 'Cinzel', serif;
+}
+
+/* Festive Neon Variant Styles */
+.theme-wall-festive-neon .wish-card-item {
+  background: rgba(18, 14, 36, 0.7);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 242, 254, 0.1);
+}
+
+.theme-wall-festive-neon .wish-card-item:hover {
+  border-color: #fe53bb;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(254, 83, 186, 0.35);
+}
+
+/* Card Header: Avatar, Name, Relationship Tag, Date */
+.wish-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wish-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple, #7f5af0), var(--accent-pink, #f72585));
+  color: #ffffff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.wish-header-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.wish-author-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wish-author {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wish-tag-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: rgba(127, 90, 240, 0.2);
+  color: #a29bfe;
+  border: 1px solid rgba(127, 90, 240, 0.3);
+}
+
+.wish-time-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  margin-top: 1px;
+}
+
+/* Card Body Message */
+.wish-card-body {
+  position: relative;
+}
+
+.wish-message-body {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* Card Footer: Interactive Reactions Bar */
+.wish-reactions-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.theme-wall-sticky-notes .wish-reactions-bar {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+.wish-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.wish-reaction-pill:hover {
+  background: rgba(127, 90, 240, 0.25);
+  border-color: rgba(127, 90, 240, 0.5);
+  transform: scale(1.08);
+}
+
+.wish-reaction-pill.is-reacted {
+  background: rgba(247, 37, 133, 0.25);
+  border-color: rgba(247, 37, 133, 0.5);
+  color: #ff758c;
+}
+
+.theme-wall-sticky-notes .wish-reaction-pill {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #2d3436;
+}
+
+.theme-wall-sticky-notes .wish-reaction-pill:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* Empty State */
+.wish-empty-state {
+  text-align: center;
+  padding: 42px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.wish-empty-icon {
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+}
+
+/* CTA Action Bar */
+.wish-wall-action-bar {
+  margin-top: 10px;
+  z-index: 1;
+  text-align: center;
+}
+
+.leave-wish-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 32px;
+  font-size: 1.02rem;
+  font-weight: 800;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(90deg, #7f5af0 0%, #f72585 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(127, 90, 240, 0.45);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.leave-wish-trigger-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(127, 90, 240, 0.6);
+}
+
+.leave-wish-trigger-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* ==========================================================================
+   5. CREATOR WISH MODERATION STUDIO MODAL
+   ========================================================================== */
+
+.moderation-modal-container {
+  max-width: 920px !important;
+  width: 95% !important;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-elevated, #161426) !important;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14)) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65) !important;
+  overflow: hidden;
+}
+
+.moderation-header-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+@media (max-width: 640px) {
+  .moderation-header-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.mod-stat-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mod-stat-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main, #ffffff);
+}
+
+.mod-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.moderation-main-content {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  flex: 1;
+  overflow: hidden;
+  min-height: 420px;
+}
+
+@media (max-width: 780px) {
+  .moderation-main-content {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+
+.moderation-sidebar-settings {
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.15);
+  border-right: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.moderation-wishes-area {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+/* Moderation Tabs */
+.mod-toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mod-tabs-group {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mod-tab-btn {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mod-tab-btn:hover {
+  color: #ffffff;
+}
+
+.mod-tab-btn.is-active {
+  background: var(--accent-purple, #7f5af0);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(127, 90, 240, 0.35);
+}
+
+.mod-search-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  color: #ffffff;
+  width: 200px;
+}
+
+.mod-search-input:focus {
+  outline: none;
+  border-color: var(--accent-purple, #7f5af0);
+}
+
+/* Moderation Wish Cards */
+.mod-cards-scroll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.mod-card-row {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.mod-card-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.mod-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mod-status-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.mod-status-pill.approved { background: rgba(44, 182, 125, 0.2); color: #2cb67d; border: 1px solid rgba(44, 182, 125, 0.4); }
+.mod-status-pill.pending { background: rgba(255, 179, 0, 0.2); color: #ffb300; border: 1px solid rgba(255, 179, 0, 0.4); }
+.mod-status-pill.rejected { background: rgba(239, 69, 101, 0.2); color: #ef4565; border: 1px solid rgba(239, 69, 101, 0.4); }
+
+.mod-card-msg {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.mod-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   6. SMART INSPECTOR WISH WALL CONTROLS
+   ========================================================================== */
+
+.inspector-wishwall-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.inspector-theme-pill-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main, #ffffff);
+  transition: all 0.2s ease;
+}
+
+.inspector-theme-pill-card:hover {
+  background: rgba(127, 90, 240, 0.15);
+  border-color: rgba(127, 90, 240, 0.4);
+}
+
+.inspector-theme-pill-card.is-selected {
+  background: rgba(127, 90, 240, 0.25);
+  border-color: var(--accent-purple, #7f5af0);
+  box-shadow: 0 0 10px rgba(127, 90, 240, 0.3);
+}
+
+.inspector-emoji-picker-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.inspector-emoji-chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.inspector-emoji-chip:hover {
+  transform: scale(1.15);
+  background: rgba(127, 90, 240, 0.2);
+  border-color: var(--accent-purple, #7f5af0);
+}
+
+.inspector-emoji-chip.is-active {
+  background: rgba(127, 90, 240, 0.3);
+  border-color: var(--accent-purple, #7f5af0);
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   7. WISH WALL PREVIEW MODAL & DEVICE VIEWPORT FRAMING
+   ========================================================================== */
+
+.wish-wall-preview-modal-overlay {
+  z-index: 10000;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.wish-wall-preview-container {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.85) !important;
+}
+
+#previewWallCanvasFrame {
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-radius 0.3s ease;
+}
+
+#previewWallCanvasFrame.ratio-story {
+  border: 8px solid #232038;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(127, 90, 240, 0.25);
+}
+
+#previewWallCanvasFrame.ratio-widescreen {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* ==========================================================================
+   8. REDESIGNED LEAVE A WISH MODAL (CINEMATIC GLASSMORPHISM)
+   ========================================================================== */
+
+.wish-submission-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: radial-gradient(circle at center, rgba(30, 15, 60, 0.88) 0%, rgba(8, 7, 16, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+}
+
+.wish-submission-overlay.dismissing {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(1.02);
+}
+
+.wish-submission-card {
+  background: rgba(22, 18, 38, 0.94);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.85), 0 0 40px rgba(127, 90, 240, 0.25);
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 32px 28px;
+  position: relative;
+  color: #ffffff;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.wish-submission-card::-webkit-scrollbar {
+  display: none;
+}
+
+.wish-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
+}
+
+.wish-modal-pill {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--accent-gold, #f6c90e);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.wish-modal-title {
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.wish-modal-subtitle {
+  font-size: 0.84rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.65));
+  margin: 0;
+  line-height: 1.45;
+}
+
+.wish-modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.wish-modal-close-btn:hover {
+  background: rgba(255, 71, 87, 0.25);
+  border-color: rgba(255, 71, 87, 0.5);
+  transform: rotate(90deg) scale(1.05);
+  color: #ff6b81;
+}
+
+/* Form Controls */
+.wish-form-group {
+  margin-bottom: 16px;
+}
+
+.wish-field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+  margin-bottom: 8px;
+}
+
+.wish-required-star {
+  color: #ff4757;
+}
+
+.wish-glass-input,
+.wish-glass-textarea {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #ffffff;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.wish-glass-input:focus,
+.wish-glass-textarea:focus {
+  border-color: #a78bfa;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 16px rgba(127, 90, 240, 0.3);
+}
+
+.wish-glass-input::placeholder,
+.wish-glass-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Anonymity Custom Checkbox */
+.wish-anon-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.wish-anon-toggle input {
+  display: none;
+}
+
+.wish-anon-custom-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.wish-anon-toggle input:checked + .wish-anon-custom-box {
+  background: #7f5af0;
+  border-color: #a78bfa;
+}
+
+.wish-anon-toggle input:checked + .wish-anon-custom-box::after {
+  content: '✓';
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+/* Segmented Mode Switcher */
+.wish-type-toggle-pills {
+  display: flex;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.wish-type-pill {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  outline: none;
+}
+
+.wish-type-pill:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wish-type-pill.active {
+  background: linear-gradient(135deg, #7f5af0 0%, #d946ef 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(127, 90, 240, 0.45);
+}
+
+/* Preset Cards Grid */
+.wish-preset-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 90, 240, 0.4) transparent;
+}
+
+.wish-preset-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.wish-preset-card:hover {
+  background: rgba(127, 90, 240, 0.12);
+  border-color: rgba(127, 90, 240, 0.35);
+  transform: translateX(3px);
+}
+
+.wish-preset-card.selected {
+  background: rgba(127, 90, 240, 0.22);
+  border-color: #a78bfa;
+  box-shadow: 0 0 16px rgba(127, 90, 240, 0.25);
+}
+
+.wish-preset-text {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  flex: 1;
+}
+
+.wish-preset-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #a78bfa;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.wish-preset-card.selected .wish-preset-indicator {
+  border-color: #a78bfa;
+  background: #a78bfa;
+  color: #161226;
+}
+
+/* Custom Textarea Container & Counter */
+.wish-custom-container {
+  position: relative;
+}
+
+.wish-char-counter {
+  text-align: right;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 6px;
+}
+
+/* Submit Button */
+.wish-modal-footer {
+  margin-top: 20px;
+}
+
+.wish-submit-btn {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7f5af0 0%, #f72585 100%);
+  color: #ffffff;
+  font-size: 1.02rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(127, 90, 240, 0.45);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  user-select: none;
+}
+
+.wish-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(127, 90, 240, 0.65), 0 0 20px rgba(247, 37, 133, 0.4);
+}
+
+.wish-submit-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.wish-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Success View */
+.wish-success-view {
+  text-align: center;
+  padding: 44px 32px;
+}
+
+.wish-success-badge {
+  font-size: 3.2rem;
+  margin-bottom: 12px;
+  animation: floatBounce 2.5s infinite ease-in-out;
+}
+
+.wish-success-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+}
+
+.wish-success-desc {
+  font-size: 0.92rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.7));
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  .wish-submission-card {
+    padding: 24px 18px;
+    border-radius: 18px;
+    max-height: 92vh;
+  }
+  .wish-modal-title {
+    font-size: 1.25rem;
+  }
+  .wish-type-pill {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+  .wish-preset-grid {
+    max-height: 190px;
+  }
+}
+
+

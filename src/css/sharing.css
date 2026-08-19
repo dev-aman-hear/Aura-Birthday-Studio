@@ -1,0 +1,8 @@
+/**
+ * Birthday Studio - Share & Delivery Center CSS (Section 2)
+ */
+
+#shareModalRoot svg {
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}

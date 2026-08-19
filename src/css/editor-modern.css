@@ -1,0 +1,929 @@
+/**
+ * Birthday Studio - Modern Universal Visual Story Editor CSS
+ * Compact, space-efficient, Canva-inspired workspace with maximum canvas real-estate,
+ * collapsible sidebars, floating contextual toolbar, minimal header, and focus mode.
+ */
+
+/* ==========================================================================
+   1. Minimalist Top Nav Header & Dropdown
+   ========================================================================== */
+
+.top-nav.top-nav-minimal {
+  height: 52px;
+  min-height: 52px;
+  background: var(--surface-elevated, #161426);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1000;
+  position: relative;
+  overflow: visible;
+}
+
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text, #ffffff);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.more-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent, #7f5af0);
+}
+
+.more-menu-item.active {
+  background: rgba(127, 90, 240, 0.2);
+  color: var(--accent, #7f5af0);
+}
+
+.more-menu-item.text-danger:hover {
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--danger, #ff4757) !important;
+}
+
+/* ==========================================================================
+   2. Modern Editor Main Layout & Root Grid
+   ========================================================================== */
+
+.modern-editor-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+  background: var(--bg, #090812);
+  color: var(--text, #ffffff);
+  position: relative;
+  user-select: none;
+}
+
+/* 3-Zone Desktop Grid Workspace (Rail | Canvas | Inspector) */
+.modern-editor-workspace {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 320px;
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tablet Breakpoint (768px – 1100px) */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .modern-editor-workspace {
+    grid-template-columns: 68px minmax(0, 1fr) 280px;
+  }
+  .modern-smart-inspector {
+    width: 280px !important;
+  }
+  .inspector-toggle-tab {
+    right: 280px !important;
+  }
+}
+
+/* Desktop Breakpoint (> 1100px) */
+@media (min-width: 1101px) {
+  .modern-editor-workspace {
+    grid-template-columns: 84px minmax(0, 1fr) 320px;
+  }
+}
+
+/* Collapsed Sidebars States for Maximum Canvas Space */
+.modern-editor-workspace.rail-collapsed {
+  grid-template-columns: 0px minmax(0, 1fr) 320px;
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .modern-editor-workspace.rail-collapsed {
+    grid-template-columns: 0px minmax(0, 1fr) 280px;
+  }
+}
+
+.modern-editor-workspace.inspector-collapsed {
+  grid-template-columns: 84px minmax(0, 1fr) 0px;
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .modern-editor-workspace.inspector-collapsed {
+    grid-template-columns: 68px minmax(0, 1fr) 0px;
+  }
+}
+
+.modern-editor-workspace.rail-collapsed.inspector-collapsed {
+  grid-template-columns: 0px minmax(0, 1fr) 0px;
+}
+
+/* ==========================================================================
+   3. Scene Rail (Compact Left Vertical Filmstrip)
+   ========================================================================== */
+
+.modern-scene-rail {
+  width: 100%;
+  background: var(--surface, #110f1e);
+  border-right: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 20;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Visually hide scrollbars on scene rail and mobile filmstrip without disabling scroll functionality */
+.modern-scene-rail::-webkit-scrollbar,
+.rail-scenes-list::-webkit-scrollbar,
+.mobile-scene-filmstrip::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.modern-editor-workspace.rail-collapsed .modern-scene-rail {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rail-toggle-tab {
+  position: absolute;
+  left: 84px;
+  top: 16px;
+  background: var(--surface-elevated, #1c1830);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-left: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 8px 5px;
+  cursor: pointer;
+  z-index: 25;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  .rail-toggle-tab {
+    left: 68px;
+  }
+}
+
+.modern-editor-workspace.rail-collapsed .rail-toggle-tab {
+  left: 0 !important;
+}
+
+.rail-toggle-tab:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.rail-scenes-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 6px;
+}
+
+.rail-scene-card {
+  width: 62px;
+  height: 78px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-elevated, #1c1830);
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 3px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.rail-scene-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(127, 90, 240, 0.5);
+}
+
+.rail-scene-card.active {
+  border-color: var(--accent, #7f5af0);
+  box-shadow: 0 0 12px rgba(127, 90, 240, 0.4);
+  background: rgba(127, 90, 240, 0.15);
+}
+
+.rail-scene-num {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.rail-scene-card.active .rail-scene-num {
+  color: var(--accent);
+}
+
+.rail-scene-preview-icon {
+  font-size: 1.25rem;
+}
+
+.rail-scene-duration {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.rail-scene-more-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  padding: 0 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.rail-scene-card:hover .rail-scene-more-btn {
+  opacity: 1;
+}
+
+.rail-scene-more-btn:hover {
+  color: var(--accent);
+}
+
+.rail-add-scene-btn {
+  width: 62px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.rail-add-scene-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(127, 90, 240, 0.08);
+}
+
+/* ==========================================================================
+   4. Central Interactive Canvas Workspace (Desktop Flexible Stage)
+   ========================================================================== */
+
+.modern-canvas-workspace {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, #151326 0%, #080710 100%);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  padding: 40px 20px 20px 20px;
+  box-sizing: border-box;
+}
+
+.canvas-viewport-frame {
+  position: relative;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  background: #000;
+  transition: max-width 0.2s ease, max-height 0.2s ease, aspect-ratio 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Aspect ratio presets */
+.canvas-viewport-frame.ratio-story,
+.canvas-viewport-frame[data-preview-mode="mobile"] {
+  aspect-ratio: 9 / 16;
+  height: 100%;
+  max-height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+.canvas-viewport-frame.ratio-widescreen,
+.canvas-viewport-frame[data-preview-mode="desktop"] {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+}
+
+.canvas-viewport-frame.ratio-square {
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  max-height: 100%;
+}
+
+.floating-view-mode-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--surface, #141224);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+  border-radius: 20px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-mode-pill {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a1b2);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.view-mode-pill:hover {
+  color: var(--text, #fff);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.view-mode-pill.active {
+  background: var(--accent, #7f5af0);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(127, 90, 240, 0.4);
+}
+
+.canvas-viewport-frame .story-canvas-container {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+}
+
+/* ==========================================================================
+   5. Floating Contextual Toolbar & Universal + Add Menu
+   ========================================================================== */
+
+.floating-context-toolbar {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(24, 20, 42, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 1000;
+  overflow: visible;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  animation: slideDownFade 0.2s ease-out;
+  max-width: 94%;
+}
+
+.floating-tool-btn {
+  background: transparent;
+  border: none;
+  color: var(--text, #ffffff);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.floating-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--accent);
+}
+
+.floating-tool-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.floating-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 2px;
+}
+
+/* Universal Add Popover Menu */
+.universal-add-popover {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-elevated, #1a162c);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+  border-radius: var(--radius-lg, 16px);
+  padding: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  z-index: 120;
+  display: grid;
+  grid-template-columns: repeat(3, 86px);
+  gap: 8px;
+  animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.universal-add-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.universal-add-item:hover {
+  background: rgba(127, 90, 240, 0.18);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  color: var(--accent);
+}
+
+.universal-add-item-icon {
+  font-size: 1.3rem;
+}
+
+/* ==========================================================================
+   6. Smart Inspector (Compact Right Sidebar Drawer)
+   ========================================================================== */
+
+.modern-smart-inspector {
+  width: 320px;
+  background: var(--surface, #110f1e);
+  border-left: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 20;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.modern-editor-workspace.inspector-collapsed .modern-smart-inspector {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.inspector-toggle-tab {
+  position: absolute;
+  right: 320px;
+  top: 16px;
+  background: var(--surface-elevated, #1c1830);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  padding: 8px 5px;
+  cursor: pointer;
+  z-index: 25;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.modern-editor-workspace.inspector-collapsed .inspector-toggle-tab {
+  right: 0 !important;
+}
+
+.inspector-toggle-tab:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.inspector-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--surface, #110f1e);
+}
+
+.inspector-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspector-body {
+  padding: 12px 14px 28px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.inspector-body::-webkit-scrollbar {
+  width: 5px;
+}
+.inspector-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.inspector-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inspector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspector-section-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.inspector-disclosure {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+/* ==========================================================================
+   7. Focus Mode Full Screen Canvas
+   ========================================================================== */
+
+.modern-editor-root.editor-focus-mode .top-nav,
+.modern-editor-root.editor-focus-mode .modern-editor-topbar {
+  display: none !important;
+}
+
+.modern-editor-root.editor-focus-mode .modern-editor-workspace {
+  grid-template-columns: 0px minmax(0, 1fr) 0px !important;
+  height: 100vh;
+}
+
+.modern-editor-root.editor-focus-mode .modern-scene-rail,
+.modern-editor-root.editor-focus-mode .modern-smart-inspector,
+.modern-editor-root.editor-focus-mode .rail-toggle-tab,
+.modern-editor-root.editor-focus-mode .inspector-toggle-tab,
+.modern-editor-root.editor-focus-mode .mobile-editor-bottom-wrapper {
+  display: none !important;
+}
+
+.modern-editor-root.editor-focus-mode .canvas-viewport-frame {
+  max-width: 96%;
+  max-height: 94%;
+}
+
+.focus-mode-exit-pill {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(24, 20, 42, 0.95);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  animation: slideUpFade 0.3s ease;
+}
+
+.modern-editor-root.editor-focus-mode .focus-mode-exit-pill {
+  display: inline-flex;
+}
+
+/* ==========================================================================
+   8. Mobile Layout & Swipeable Bottom Sheet (< 768px)
+   ========================================================================== */
+
+@media (max-width: 767px) {
+  .top-nav.top-nav-minimal {
+    height: 48px;
+    padding: 0 10px;
+  }
+
+  .modern-editor-workspace {
+    grid-template-columns: 1fr !important;
+    height: calc(100% - 100px);
+  }
+
+  .modern-scene-rail,
+  .modern-smart-inspector,
+  .rail-toggle-tab,
+  .inspector-toggle-tab {
+    display: none !important;
+  }
+
+  .modern-canvas-workspace {
+    padding: 10px 6px;
+  }
+
+  .canvas-viewport-frame.ratio-story {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+  }
+
+  /* Mobile Bottom Filmstrip & Action Bar */
+  .mobile-editor-bottom-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: var(--surface-elevated, #161426);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  .mobile-scene-filmstrip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    height: 46px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .mobile-filmstrip-card {
+    min-width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .mobile-filmstrip-card.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(127, 90, 240, 0.2);
+  }
+
+  .mobile-action-bar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 54px;
+    padding: 0 6px;
+  }
+
+  .mobile-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .mobile-action-btn:hover,
+  .mobile-action-btn.active {
+    color: var(--accent);
+  }
+
+  .mobile-action-btn-icon {
+    font-size: 1.15rem;
+  }
+
+  /* Mobile Bottom Sheet Drawer */
+  .mobile-bottom-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .mobile-bottom-sheet-content {
+    background: var(--surface-elevated, #1a162c);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 16px 20px 32px 20px;
+    animation: slideUp 0.25s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .mobile-sheet-drag-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 auto 14px auto;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-editor-bottom-wrapper {
+    display: none !important;
+  }
+}
+
+/* Locked Preset Scene Selection & Frame Highlighting */
+.canvas-selection-box.locked-layout-box {
+  border: 2px dashed var(--accent, #7f5af0) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 18px rgba(127, 90, 240, 0.4) !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.btn-quick-action.primary {
+  background: var(--accent, #7f5af0) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(127, 90, 240, 0.5) !important;
+  padding: 5px 10px !important;
+  font-size: 0.76rem !important;
+}
+
+/* ==========================================================================
+   Universal Asset Management System Styles
+   ========================================================================== */
+
+.scene-assets-panel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.scene-asset-status-card {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.slot-card {
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.slot-card:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.slot-card-missing {
+  border-color: #ffa502 !important;
+  background: rgba(255, 165, 2, 0.05) !important;
+}
+
+.slot-card-complete {
+  border-color: rgba(46, 213, 115, 0.3) !important;
+}
+
+.slot-asset-row:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.modal-asset-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.modal-asset-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.modal-asset-card.compatible:hover {
+  border-color: #2ed573 !important;
+}
+
+.modal-asset-card.incompatible {
+  opacity: 0.65;
+}
+
+.modal-asset-card.incompatible:hover {
+  opacity: 0.9;
+  border-color: #ff4757 !important;
+}
+
+.picker-filter-tabs .btn {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+}
+
+/* ==========================================================================
+   Add Scene Modal & Template Picker Scrollbar Minimization
+   ========================================================================== */
+.scene-picker-scroll-container,
+.template-picker-grid,
+.scene-picker-grid,
+#scenePickerModalRoot .wizard-modal > div:nth-child(2),
+#scenePickerModalRoot .template-picker-grid,
+#scenePickerModalRoot .scene-picker-grid {
+  /* Firefox */
+  scrollbar-width: none;
+  /* IE / Legacy Edge */
+  -ms-overflow-style: none;
+  /* Smooth iOS touch scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Chrome, Edge, Safari, WebKit */
+.scene-picker-scroll-container::-webkit-scrollbar,
+.template-picker-grid::-webkit-scrollbar,
+.scene-picker-grid::-webkit-scrollbar,
+#scenePickerModalRoot .wizard-modal > div:nth-child(2)::-webkit-scrollbar,
+#scenePickerModalRoot .template-picker-grid::-webkit-scrollbar,
+#scenePickerModalRoot .scene-picker-grid::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+

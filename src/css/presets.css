@@ -1,0 +1,168 @@
+/**
+ * Birthday Studio - Presets CSS (Section 2, 8, 15)
+ * Styling for Preset Collection Grid, Detail Modal & Personalization Flow
+ */
+
+.preset-collection-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.preset-collection-header {
+  background: linear-gradient(135deg, #2a1845 0%, #141322 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+}
+
+.preset-occasion-filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.preset-occasion-filters::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Preset Preview Modal & Story Sequence Strip (Scrollbar Hidden & Drag-to-Scroll) */
+#presetPreviewModalRoot .wizard-modal,
+#presetPreviewModalRoot .preset-preview-sequence,
+.preset-preview-sequence {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+#presetPreviewModalRoot .wizard-modal::-webkit-scrollbar,
+#presetPreviewModalRoot .preset-preview-sequence::-webkit-scrollbar,
+.preset-preview-sequence::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.preset-preview-sequence {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-x;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.preset-preview-sequence.is-dragging {
+  cursor: grabbing !important;
+  scroll-behavior: auto !important;
+}
+
+.preset-sequence-card {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.preset-sequence-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent, #7f5af0) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.preset-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.preset-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.preset-card-graphic {
+  height: 120px;
+  background: linear-gradient(135deg, #441e78 0%, #1d1b30 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.preset-card-icon { font-size: 2.8rem; }
+
+.preset-card-body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preset-card-title { font-size: 1.1rem; font-weight: 800; }
+.preset-card-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+
+.preset-tags-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.preset-tag-pill {
+  background: var(--bg);
+  color: var(--accent-gold);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+}
+
+/* Variant Dropdown Selector (Section 8) */
+.variant-dropdown-select {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background-color: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.variant-dropdown-select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.variant-dropdown-select option {
+  background-color: var(--surface-elevated);
+  color: var(--text);
+  padding: 10px;
+}
+
+/* Mobile Responsive Adjustments (<768px) */
+@media (max-width: 767px) {
+  .preset-grid {
+    grid-template-columns: 1fr;
+  }
+}

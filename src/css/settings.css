@@ -1,0 +1,9 @@
+/**
+ * Birthday Studio - Creator Settings CSS (Section 8)
+ */
+
+#creatorSettingsModalRoot .form-group label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}

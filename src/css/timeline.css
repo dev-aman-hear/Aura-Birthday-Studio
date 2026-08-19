@@ -1,0 +1,84 @@
+/**
+ * Birthday Studio - Horizontal Scene Timeline CSS (Section 2)
+ */
+
+.scene-timeline-strip-container {
+  height: 110px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.timeline-scroll-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timeline-scene-card {
+  width: 150px;
+  height: 80px;
+  background: var(--surface-elevated);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.timeline-scene-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.timeline-scene-card.selected {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+.timeline-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.scene-num-badge {
+  color: var(--accent-gold);
+}
+
+.scene-title-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.timeline-card-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.timeline-add-scene-btn {
+  height: 80px;
+  padding: 0 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+}

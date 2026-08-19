@@ -1,0 +1,20 @@
+/**
+ * Birthday Studio - Property Inspector CSS (Section 6 & 13)
+ */
+
+.scene-editor-panel {
+  background: var(--surface);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  height: 48px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

@@ -1,0 +1,24 @@
+/**
+ * Birthday Studio - Consolidated Design System & Tokens (Section 8)
+ */
+
+:root {
+  --primary-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg-dark: #0f0e17;
+  --surface-dark: #16161a;
+  --surface-elevated-dark: #242629;
+  --accent-purple: #7f5af0;
+  --accent-green: #2cb67d;
+  --accent-gold: #ffd166;
+  --accent-pink: #ff7675;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cmd-item-row.selected {
+  background: var(--surface-hover) !important;
+  border-color: var(--accent) !important;
+}

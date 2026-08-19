@@ -1,0 +1,265 @@
+/**
+ * Birthday Studio - Unified Button & Component System (Section 4 & 5)
+ */
+
+/* Base Button */
+.btn {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  min-height: 38px;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform 0.1s ease, box-shadow var(--transition-fast);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Button Variants */
+.btn-primary {
+  background-color: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-secondary {
+  background-color: var(--surface-elevated);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--border);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--surface-elevated);
+  color: var(--text);
+}
+
+.btn-icon {
+  padding: 6px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-muted);
+}
+.btn-icon:hover:not(:disabled) {
+  background-color: var(--surface-elevated);
+  color: var(--text);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: #ffffff;
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-success {
+  background-color: var(--success);
+  color: #ffffff;
+}
+.btn-success:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-warning {
+  background-color: var(--warning);
+  color: #000000;
+}
+.btn-warning:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-compact {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  min-height: 30px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Form Controls & Inputs */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  transition: border-color var(--transition-fast);
+}
+.form-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Editable Text Elements */
+.editable-text-element {
+  display: inline-block;
+  cursor: pointer;
+  transition: outline 0.15s ease, transform 0.15s ease;
+}
+
+.editable-text-element:hover {
+  outline: 2px dashed rgba(127, 90, 240, 0.6);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.editable-text-element:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Cards & Badges */
+.panel-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--surface);
+}
+
+.panel-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* Asset Cards */
+.asset-card {
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.asset-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.asset-card.selected {
+  border-color: var(--accent-pink);
+  background-color: var(--surface-hover);
+}
+
+.asset-thumb-box {
+  height: 85px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asset-img-thumb { width: 100%; height: 100%; object-fit: cover; }
+.asset-text-thumb { font-size: 0.72rem; padding: 6px; color: var(--accent-gold); text-align: center; font-weight: 500; }
+
+.asset-info-bar {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.asset-name-label { font-size: 0.76rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asset-usage-badge { font-size: 0.68rem; color: var(--text-muted); }
+.asset-usage-badge.used { color: var(--success); font-weight: 600; }
+
+/* 10-Asset Scene Limit Badge & Banner */
+.scene-limit-badge {
+  font-size: 0.75rem;
+  background: var(--surface-elevated);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  color: var(--success);
+  font-weight: 600;
+}
+.scene-limit-badge.limit-reached {
+  background: var(--danger);
+  color: #ffffff;
+  border-color: var(--danger);
+}
+
+.scene-limit-banner {
+  background-color: rgba(230, 57, 70, 0.15);
+  border: 1px solid var(--danger);
+  color: #ff7675;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 12px 14px 0 14px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mobile Specific Minimum Touch Target (Section 4 & 18) */
+@media (max-width: 768px) {
+  .btn {
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+  .btn-compact {
+    min-height: 38px;
+  }
+}

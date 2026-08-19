@@ -1,0 +1,722 @@
+/**
+ * Birthday Studio - Universal Countdown Timer CSS
+ * 7 Distinct Styles (Minimal, Elegant, Cinematic, Glass, Neon, Flip, Fullscreen) + Simulator
+ */
+
+/* ==========================================================================
+   1. Base Countdown Viewport & Layout
+   ========================================================================== */
+
+.countdown-player-viewport {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.countdown-header-area {
+  margin-bottom: 24px;
+  max-width: 640px;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+.countdown-main-title {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 900;
+  margin-bottom: 6px;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.countdown-sub-title {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Expressive Date Display Component (Theme-Aware & Responsive)
+   ========================================================================== */
+
+.expressive-date-display {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 12px auto 6px auto;
+  padding: 10px 20px;
+  position: relative;
+  box-sizing: border-box;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 3;
+}
+
+/* Badge / Header Pill */
+.expressive-date-badge-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.expressive-date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(0.68rem, 1.8vw, 0.78rem);
+  font-weight: 800;
+  letter-spacing: clamp(1.2px, 0.3vw, 2.5px);
+  text-transform: uppercase;
+  color: var(--text-muted, #a0a0b2);
+  line-height: 1;
+}
+
+.badge-ornament {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+/* Composition & Weekday */
+.expressive-date-composition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.expressive-date-weekday {
+  font-size: clamp(0.72rem, 1.8vw, 0.84rem);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent, #a78bfa);
+  opacity: 0.9;
+  line-height: 1.2;
+}
+
+/* Core Day + Month/Year Unit */
+.expressive-date-core {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 14px);
+  line-height: 1;
+}
+
+.expressive-date-day {
+  font-size: clamp(2rem, 5.5vw, 3.2rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.95;
+  color: var(--text, #ffffff);
+  letter-spacing: -0.5px;
+}
+
+.expressive-date-month-year {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  line-height: 1.15;
+}
+
+.expressive-date-month {
+  font-size: clamp(0.95rem, 2.6vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text, #ffffff);
+}
+
+.expressive-date-year {
+  font-size: clamp(0.72rem, 1.8vw, 0.88rem);
+  font-weight: 600;
+  color: var(--text-muted, #94a1b2);
+  letter-spacing: 1px;
+}
+
+/* Subtle Divider */
+.expressive-date-divider {
+  width: clamp(80px, 22vw, 160px);
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+}
+
+/* 1. Minimal Clean */
+.expressive-date-display.theme-countdown_minimal {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg, 12px);
+  padding: 8px 18px;
+}
+.expressive-date-display.theme-countdown_minimal .expressive-date-day {
+  color: #ffffff;
+}
+.expressive-date-display.theme-countdown_minimal .expressive-date-weekday {
+  color: #a0a0b2;
+}
+
+/* 2. Elegant Gold */
+.expressive-date-display.theme-countdown_elegant {
+  background: radial-gradient(circle at center, rgba(223, 177, 91, 0.12) 0%, rgba(20, 16, 32, 0.4) 100%);
+  border: 1px solid rgba(223, 177, 91, 0.35);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: 0 4px 24px rgba(223, 177, 91, 0.15);
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+}
+.expressive-date-display.theme-countdown_elegant .expressive-date-badge {
+  color: #dfb15b;
+}
+.expressive-date-display.theme-countdown_elegant .expressive-date-weekday {
+  color: #dfb15b;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 2.5px;
+}
+.expressive-date-display.theme-countdown_elegant .expressive-date-day {
+  color: #fbf5b7;
+  background: linear-gradient(180deg, #ffffff 0%, #ffd700 45%, #b38728 85%, #fbf5b7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+.expressive-date-display.theme-countdown_elegant .expressive-date-month {
+  color: #ffd700;
+  letter-spacing: 2px;
+}
+.expressive-date-display.theme-countdown_elegant .expressive-date-divider {
+  background: linear-gradient(90deg, transparent, rgba(223, 177, 91, 0.6), transparent);
+}
+
+/* 3. Cinematic */
+.expressive-date-display.theme-countdown_cinematic {
+  background: rgba(10, 16, 28, 0.85);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.18);
+}
+.expressive-date-display.theme-countdown_cinematic .expressive-date-badge {
+  color: #00f2fe;
+}
+.expressive-date-display.theme-countdown_cinematic .expressive-date-weekday {
+  color: #4facfe;
+}
+.expressive-date-display.theme-countdown_cinematic .expressive-date-day {
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(0, 242, 254, 0.6);
+}
+.expressive-date-display.theme-countdown_cinematic .expressive-date-month {
+  color: #e0f7fa;
+}
+.expressive-date-display.theme-countdown_cinematic .expressive-date-divider {
+  background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.5), transparent);
+}
+
+/* 4. Glassmorphism */
+.expressive-date-display.theme-countdown_glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-pill, 9999px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  padding: 8px 22px;
+}
+.expressive-date-display.theme-countdown_glass .expressive-date-weekday {
+  color: #a29bfe;
+}
+.expressive-date-display.theme-countdown_glass .expressive-date-day {
+  color: #ffffff;
+}
+.expressive-date-display.theme-countdown_glass .expressive-date-divider {
+  background: linear-gradient(90deg, transparent, rgba(162, 155, 254, 0.4), transparent);
+}
+
+/* 5. Neon Glow */
+.expressive-date-display.theme-countdown_neon {
+  background: rgba(24, 14, 46, 0.85);
+  border: 1px solid rgba(255, 0, 127, 0.45);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: 0 0 24px rgba(255, 0, 127, 0.25);
+}
+.expressive-date-display.theme-countdown_neon .expressive-date-badge {
+  color: #ff007f;
+}
+.expressive-date-display.theme-countdown_neon .expressive-date-weekday {
+  color: #00f2fe;
+}
+.expressive-date-display.theme-countdown_neon .expressive-date-day {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.8), 0 0 20px rgba(255, 0, 127, 0.4);
+}
+.expressive-date-display.theme-countdown_neon .expressive-date-month {
+  color: #ff007f;
+}
+.expressive-date-display.theme-countdown_neon .expressive-date-divider {
+  background: linear-gradient(90deg, transparent, #ff007f, transparent);
+}
+
+/* 6. Flip Clock */
+.expressive-date-display.theme-countdown_flip {
+  background: #14131f;
+  border: 1px solid #2c2b3d;
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.expressive-date-display.theme-countdown_flip .expressive-date-badge {
+  color: #ffd700;
+}
+.expressive-date-display.theme-countdown_flip .expressive-date-weekday {
+  color: #a0a0b2;
+}
+.expressive-date-display.theme-countdown_flip .expressive-date-day {
+  color: #ffd700;
+  background: #0d0c15;
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid #222033;
+}
+.expressive-date-display.theme-countdown_flip .expressive-date-month {
+  color: #ffffff;
+}
+
+/* 7. Full Screen Immersive */
+.expressive-date-display.theme-countdown_fullscreen {
+  background: rgba(127, 90, 240, 0.12);
+  border: 1px solid rgba(127, 90, 240, 0.3);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 8px 24px;
+  backdrop-filter: blur(12px);
+}
+.expressive-date-display.theme-countdown_fullscreen .expressive-date-day {
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(127, 90, 240, 0.6);
+}
+.expressive-date-display.theme-countdown_fullscreen .expressive-date-weekday {
+  color: #a78bfa;
+}
+
+/* Mode Mobile */
+.expressive-date-display.mode-mobile {
+  padding: 6px 14px;
+  margin: 8px auto 4px auto;
+}
+
+.expressive-date-display.mode-mobile .expressive-date-core {
+  gap: 8px;
+}
+
+.expressive-date-display.mode-mobile .expressive-date-day {
+  font-size: clamp(1.6rem, 4.5vw, 2.2rem);
+}
+
+.expressive-date-display.mode-mobile .expressive-date-month {
+  font-size: clamp(0.85rem, 2.2vw, 1.05rem);
+}
+
+/* ==========================================================================
+   2. Countdown Units Grid & Digit Cards
+   ========================================================================== */
+
+.countdown-units-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 720px;
+  z-index: 2;
+  margin-bottom: 24px;
+  transition: all 0.2s ease;
+}
+
+.countdown-unit-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 76px;
+  transition: all 0.2s ease;
+}
+
+.countdown-digit-card {
+  width: 88px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.6rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-lg);
+  box-sizing: border-box;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.countdown-unit-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.countdown-footer-area {
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.countdown-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   3. Viewport Mode Adaptations (Desktop Widescreen vs Mobile Portrait)
+   ========================================================================== */
+
+/* Mode Desktop: Wide Landscape Layout */
+.countdown-player-viewport.mode-desktop {
+  padding: 32px 28px;
+}
+
+.countdown-player-viewport.mode-desktop .countdown-units-grid {
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.countdown-player-viewport.mode-desktop .countdown-digit-card {
+  width: 88px;
+  height: 96px;
+  font-size: 2.6rem;
+}
+
+/* Mode Mobile: Compact 9:16 Portrait Layout */
+.countdown-player-viewport.mode-mobile {
+  padding: 20px 12px;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-header-area {
+  margin-bottom: 14px;
+  max-width: 260px;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-main-title {
+  font-size: 1.15rem;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-sub-title {
+  font-size: 0.78rem;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-event-meta-badge {
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  margin-top: 6px;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-units-grid {
+  gap: 6px;
+  max-width: 270px;
+  margin-bottom: 16px;
+  flex-wrap: nowrap;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-unit-box {
+  min-width: 54px;
+  gap: 4px;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-digit-card {
+  width: 54px;
+  height: 62px;
+  font-size: 1.5rem;
+  border-radius: 8px;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-unit-label {
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+}
+
+.countdown-player-viewport.mode-mobile .countdown-live-indicator {
+  font-size: 0.68rem;
+}
+
+/* ==========================================================================
+   4. Seven Universal Timer Themes
+   ========================================================================== */
+
+/* 1. Minimal Clean */
+.style-countdown-minimal {
+  background: #09090e;
+  color: #ffffff;
+}
+
+.style-countdown-minimal .countdown-digit-card {
+  background: #151520;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-radius: 8px;
+}
+
+/* 2. Elegant Gold */
+.style-countdown-elegant {
+  background: linear-gradient(135deg, #161226 0%, #0c0a14 60%, #1f1830 100%);
+  color: #f8f9fa;
+}
+
+.style-countdown-elegant .countdown-main-title {
+  font-family: 'Playfair Display', serif;
+  color: #dfb15b;
+}
+
+.style-countdown-elegant .countdown-digit-card {
+  background: rgba(223, 177, 91, 0.08);
+  border: 1.5px solid rgba(223, 177, 91, 0.4);
+  color: #dfb15b;
+  box-shadow: 0 0 20px rgba(223, 177, 91, 0.15);
+}
+
+.style-countdown-elegant .countdown-unit-label {
+  color: #dfb15b;
+}
+
+/* 3. Cinematic Vignette */
+.style-countdown-cinematic {
+  background: radial-gradient(circle at center, #1b1633 0%, #05040a 100%);
+  color: #ffffff;
+}
+
+.style-countdown-cinematic .countdown-digit-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+}
+
+/* 4. Glass Frost */
+.style-countdown-glass {
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+  color: #ffffff;
+}
+
+.style-countdown-glass .countdown-digit-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* 5. Cyber Neon */
+.style-countdown-neon {
+  background: #06040e;
+  color: #00f2fe;
+}
+
+.style-countdown-neon .countdown-main-title {
+  color: #ff007f;
+  text-shadow: 0 0 16px rgba(255, 0, 127, 0.7);
+}
+
+.style-countdown-neon .countdown-digit-card {
+  background: rgba(0, 242, 254, 0.06);
+  border: 1.5px solid #00f2fe;
+  color: #00f2fe;
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.4), inset 0 0 12px rgba(0, 242, 254, 0.2);
+}
+
+.style-countdown-neon .countdown-unit-label {
+  color: #00f2fe;
+}
+
+/* 6. Mechanical Split-Flip */
+.style-countdown-flip {
+  background: #111116;
+  color: #ffffff;
+}
+
+.style-countdown-flip .countdown-digit-card {
+  background: #202028;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid #08080a;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+}
+
+/* 7. Full Screen Immersive */
+.style-countdown-fullscreen {
+  background: linear-gradient(135deg, #2b1147 0%, #0c0918 50%, #170f2e 100%);
+  color: #ffffff;
+}
+
+.style-countdown-fullscreen .countdown-digit-card {
+  background: transparent;
+  border: none;
+  font-size: 3.2rem;
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(127, 90, 240, 0.6);
+  width: 96px;
+}
+
+/* ==========================================================================
+   5. In-Editor Split Simulator & Modal Controls
+   ========================================================================== */
+
+.countdown-modal-container {
+  max-width: 1100px !important;
+  width: 95vw !important;
+  max-height: 90vh !important;
+  height: 90vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border-radius: var(--radius-lg, 16px) !important;
+}
+
+.countdown-modal-header {
+  flex-shrink: 0;
+}
+
+.countdown-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1.05fr 1.15fr;
+  gap: 24px;
+  align-items: stretch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.countdown-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.countdown-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+.countdown-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.countdown-settings-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.countdown-modal-footer {
+  flex-shrink: 0;
+}
+
+.countdown-split-layout {
+  display: grid;
+  grid-template-columns: 1.05fr 1.15fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.countdown-style-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.countdown-style-card-mini {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.countdown-style-card-mini:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.countdown-style-card-mini.selected {
+  border-color: var(--accent);
+  background: rgba(127, 90, 240, 0.12);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.btn-simulate-zero {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #ff007f 0%, #7f5af0 100%);
+  color: #ffffff;
+  font-weight: 800;
+  border: none;
+  box-shadow: 0 4px 14px rgba(255, 0, 127, 0.35);
+  transition: all var(--transition-fast);
+}
+
+.btn-simulate-zero:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 0, 127, 0.5);
+}
+
+/* ==========================================================================
+   6. Responsive Breakpoints
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .countdown-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .countdown-units-grid {
+    gap: 8px;
+  }
+
+  .countdown-unit-box {
+    min-width: 64px;
+  }
+
+  .countdown-digit-card {
+    width: 68px;
+    height: 76px;
+    font-size: 2rem;
+  }
+
+  .countdown-main-title {
+    font-size: 1.5rem;
+  }
+}
