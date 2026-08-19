@@ -269,55 +269,66 @@ export class UniversalSceneRenderer {
    * Internal router for structured legacy and special templates
    */
   static renderLegacyTemplate(scene, project, assets, options) {
-    const rawTemplateId = scene.template || 'hero';
-    const templateId = resolveTemplateId(rawTemplateId);
+    try {
+      const rawTemplateId = scene.template || 'hero';
+      const templateId = resolveTemplateId(rawTemplateId);
 
-    switch (templateId) {
-      case 'hero':
-        return renderHeroTemplate(scene, project, assets, options);
-      case 'reveal':
-        return renderRevealTemplate(scene, project, assets, options);
-      case 'photo_gallery':
-        return renderGalleryTemplate(scene, project, assets, options);
-      case 'video_showcase':
-        return renderVideoTemplate(scene, project, assets, options);
-      case 'memory_timeline':
-        return renderTimelineTemplate(scene, project, assets, options);
-      case 'message':
-        return renderMessageTemplate(scene, project, assets, options);
-      case 'collage':
-        return renderCollageTemplate(scene, project, assets, options);
-      case 'fullscreen_photo':
-        return renderFullscreenTemplate(scene, project, assets, options);
-      case 'final_wish':
-        return renderWishTemplate(scene, project, assets, options);
-      case 'wish-wall':
-        return renderWishWallSceneTemplate(scene, project, assets, options);
-      // Canonical 11 Special & Cinematic Animation Templates
-      case 'special_cinematic_intro':
-        return renderSpecialCinematicIntro(scene, project, assets, options);
-      case 'special_childhood_memories':
-        return renderSpecialChildhoodMemories(scene, project, assets, options);
-      case 'special_memory_sequence':
-        return renderSpecialMemorySequence(scene, project, assets, options);
-      case 'special_collage_gallery':
-        return renderSpecialCollageGallery(scene, project, assets, options);
-      case 'special_chaos_montage':
-        return renderSpecialChaosMontage(scene, project, assets, options);
-      case 'special_letter_reveal':
-        return renderSpecialLetterReveal(scene, project, assets, options);
-      case 'special_fake_ending':
-        return renderSpecialFakeEnding(scene, project, assets, options);
-      case 'special_3d_gift_reveal':
-        return renderSpecial3DGiftReveal(scene, project, assets, options);
-      case 'special_birthday_reveal':
-        return renderSpecialBirthdayReveal(scene, project, assets, options);
-      case 'special_bonus_memories':
-        return renderSpecialBonusMemories(scene, project, assets, options);
-      case 'special_emotional_finale':
-        return renderSpecialEmotionalFinale(scene, project, assets, options);
-      default:
-        return renderHeroTemplate(scene, project, assets, options);
+      switch (templateId) {
+        case 'hero':
+          return renderHeroTemplate(scene, project, assets, options);
+        case 'reveal':
+          return renderRevealTemplate(scene, project, assets, options);
+        case 'photo_gallery':
+          return renderGalleryTemplate(scene, project, assets, options);
+        case 'video_showcase':
+          return renderVideoTemplate(scene, project, assets, options);
+        case 'memory_timeline':
+          return renderTimelineTemplate(scene, project, assets, options);
+        case 'message':
+          return renderMessageTemplate(scene, project, assets, options);
+        case 'collage':
+          return renderCollageTemplate(scene, project, assets, options);
+        case 'fullscreen_photo':
+          return renderFullscreenTemplate(scene, project, assets, options);
+        case 'final_wish':
+          return renderWishTemplate(scene, project, assets, options);
+        case 'wish-wall':
+          return renderWishWallSceneTemplate(scene, project, assets, options);
+        // Canonical 11 Special & Cinematic Animation Templates
+        case 'special_cinematic_intro':
+          return renderSpecialCinematicIntro(scene, project, assets, options);
+        case 'special_childhood_memories':
+          return renderSpecialChildhoodMemories(scene, project, assets, options);
+        case 'special_memory_sequence':
+          return renderSpecialMemorySequence(scene, project, assets, options);
+        case 'special_collage_gallery':
+          return renderSpecialCollageGallery(scene, project, assets, options);
+        case 'special_chaos_montage':
+          return renderSpecialChaosMontage(scene, project, assets, options);
+        case 'special_letter_reveal':
+          return renderSpecialLetterReveal(scene, project, assets, options);
+        case 'special_fake_ending':
+          return renderSpecialFakeEnding(scene, project, assets, options);
+        case 'special_3d_gift_reveal':
+          return renderSpecial3DGiftReveal(scene, project, assets, options);
+        case 'special_birthday_reveal':
+          return renderSpecialBirthdayReveal(scene, project, assets, options);
+        case 'special_bonus_memories':
+          return renderSpecialBonusMemories(scene, project, assets, options);
+        case 'special_emotional_finale':
+          return renderSpecialEmotionalFinale(scene, project, assets, options);
+        default:
+          return renderHeroTemplate(scene, project, assets, options);
+      }
+    } catch (renderError) {
+      console.warn('[UniversalSceneRenderer] Error rendering scene template:', renderError);
+      return `
+        <div class="template-container" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:32px; text-align:center; background:linear-gradient(135deg, #1f1d36, #141226); color:var(--text-muted, #fff);">
+          <div style="font-size:2.8rem; margin-bottom:12px;">🎬</div>
+          <h3 style="font-size:1.15rem; font-weight:800; color:var(--text, #fff);">${scene?.name || 'Celebration Scene'}</h3>
+          <p style="font-size:0.85rem; max-width:360px; margin-top:6px;">${scene?.message || scene?.description || 'This celebration scene is ready to customize.'}</p>
+        </div>
+      `;
     }
   }
 }
