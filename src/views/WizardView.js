@@ -35,7 +35,7 @@ export class WizardView {
         <div class="wizard-header">
           <div class="wizard-brand">
             <span class="wizard-logo">🎂</span>
-            <h2>Birthday Studio Wizard</h2>
+            <h2>Aura Birthday Studio Wizard</h2>
           </div>
           <div class="wizard-steps-indicator">
             <span class="step-dot ${this.currentStep === 1 ? 'active' : ''}">1</span>

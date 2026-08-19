@@ -22,7 +22,7 @@ export class RecipientErrorView {
         </p>
 
         <div style="display:flex; gap:10px; justify-content:center;">
-          <a href="#login" class="btn btn-primary">🏠 Birthday Studio Creator Home</a>
+          <a href="#login" class="btn btn-primary">🏠 Aura Birthday Studio Creator Home</a>
         </div>
       </div>
     `;

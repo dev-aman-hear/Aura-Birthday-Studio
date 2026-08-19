@@ -21,7 +21,7 @@ export class AuthView {
       <div class="auth-card-wrapper animate-fade">
         <div class="auth-brand-header text-center">
           <div class="auth-logo-icon">✨ 🎂 ✨</div>
-          <h1 class="auth-app-title">Welcome to Birthday Studio</h1>
+          <h1 class="auth-app-title">Welcome to Aura Birthday Studio</h1>
           <p class="auth-app-tagline">Turn moments into experiences.</p>
         </div>
 
@@ -106,7 +106,7 @@ export class AuthView {
 
           try {
             const user = await authRepository.register(usernameInp, passwordInp, displayNameInp);
-            Toast.show(`Welcome to Birthday Studio, ${user.displayName}! 🎉`, 'success');
+            Toast.show(`Welcome to Aura Birthday Studio, ${user.displayName}! 🎉`, 'success');
             if (this.onSuccess) this.onSuccess(user);
           } catch (err) {
             Toast.show(err.message || 'Registration failed.', 'error');

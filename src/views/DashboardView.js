@@ -141,7 +141,7 @@ export class DashboardView {
         <div class="dash-brand-container">
           <div class="dash-brand-logo-icon">🎂</div>
           <div class="dash-brand-title-group">
-            <h1 class="dash-brand-title">Birthday Studio</h1>
+            <h1 class="dash-brand-title">Aura Birthday Studio</h1>
             <span class="dash-brand-tagline">Celebration Studio</span>
           </div>
         </div>
@@ -1029,7 +1029,7 @@ export class DashboardView {
         const url = btnShare.dataset.url;
         if (navigator.share) {
           navigator.share({
-            title: 'Birthday Studio Celebration',
+            title: 'Aura Birthday Studio Celebration',
             text: 'Check out this personalized celebration experience!',
             url: url
           }).catch(() => {});

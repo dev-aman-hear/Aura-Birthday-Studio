@@ -13,7 +13,7 @@ export class CreatorOnboardingView {
     this.steps = [
       {
         icon: '🎂',
-        title: 'Welcome to Birthday Studio!',
+        title: 'Welcome to Aura Birthday Studio!',
         description: 'Turn your favorite memories into a dynamic visual celebration story for birthdays, weddings, anniversaries and milestones.'
       },
       {
