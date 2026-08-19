@@ -1,7 +1,4 @@
-/**
- * Birthday Studio - Modern Wish Wall Scene Template
- * Dynamic Runtime Data Renderer for Approved Wishes, Custom Themes, Layouts, Interactive Reaction Pills & Counter
- */
+import { escapeHTML } from '../utils/Security.js';
 
 export function renderWishWallSceneTemplate(scene = {}, project = {}, assets = [], options = {}) {
   const projectId = project?.id || '';
@@ -179,25 +176,25 @@ export function renderWishWallSceneTemplate(scene = {}, project = {}, assets = [
                 ${isPinned ? `<span class="pinned-badge-chip">📌 Featured Wish</span>` : ''}
                 
                 <div class="wish-card-header">
-                  <div class="wish-avatar">${initial}</div>
+                  <div class="wish-avatar">${escapeHTML(initial)}</div>
                   <div class="wish-header-meta">
                     <div class="wish-author-row">
-                      <span class="wish-author">${displayName}</span>
-                      ${showTags ? `<span class="wish-tag-badge">${tag}</span>` : ''}
+                      <span class="wish-author">${escapeHTML(displayName)}</span>
+                      ${showTags ? `<span class="wish-tag-badge">${escapeHTML(tag)}</span>` : ''}
                     </div>
                     <span class="wish-time-badge">${timeAgo}</span>
                   </div>
                 </div>
 
                 <div class="wish-card-body">
-                  <div class="wish-message-body">${wish.message || ''}</div>
+                  <div class="wish-message-body">${escapeHTML(wish.message || '')}</div>
                 </div>
 
                 ${showReactions ? `
                   <div class="wish-reactions-bar">
                     ${Object.entries(reactions).map(([emoji, count]) => `
-                      <button class="wish-reaction-pill" data-emoji="${emoji}" data-wish-id="${wish.id || index}" title="React with ${emoji}">
-                        <span>${emoji}</span>
+                      <button class="wish-reaction-pill" data-emoji="${escapeHTML(emoji)}" data-wish-id="${wish.id || index}" title="React with ${escapeHTML(emoji)}">
+                        <span>${escapeHTML(emoji)}</span>
                         <span class="reaction-count">${count}</span>
                       </button>
                     `).join('')}

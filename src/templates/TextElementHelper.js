@@ -107,6 +107,8 @@ export function getTextElementStyle(el) {
 }
 
 
+import { escapeHTML } from '../utils/Security.js';
+
 export function renderTextElementHTML(scene, elementId, fallbackText = '', fallbackClass = '') {
   const elements = getOrCreateTextElements(scene);
   const el = elements.find(e => e.id === elementId);
@@ -119,7 +121,7 @@ export function renderTextElementHTML(scene, elementId, fallbackText = '', fallb
   }
 
   const style = el ? getTextElementStyle(el) : '';
-  return `<span class="editable-text-element ${fallbackClass}" data-text-id="${elementId}" style="${style}">${content}</span>`;
+  return `<span class="editable-text-element ${fallbackClass}" data-text-id="${elementId}" style="${style}">${escapeHTML(content)}</span>`;
 }
 
 export function updateTextElement(scene, elementId, updates = {}) {

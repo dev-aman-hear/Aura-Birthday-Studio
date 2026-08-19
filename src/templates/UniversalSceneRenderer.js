@@ -30,6 +30,7 @@ import {
 import { PresetService } from '../services/PresetService.js';
 import { StyleRegistry } from '../data/styles/StyleRegistry.js';
 import { resolveTemplateId } from './TemplateRegistry.js';
+import { escapeHTML, sanitizeUrl } from '../utils/Security.js';
 
 export class UniversalSceneRenderer {
   /**
@@ -182,20 +183,22 @@ export class UniversalSceneRenderer {
         case 'image': {
           const fit = el.fit || 'cover';
           const radius = el.borderRadius ? `${el.borderRadius}px` : (style?.elements?.cardRadius || '12px');
+          const safeUrl = sanitizeUrl(content, replacements.photo1);
           return `
             <div class="universal-element element-image" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle}">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%; position:relative;">
-                <img src="${content}" alt="${el.name || 'Image'}" style="width:100%; height:100%; object-fit:${fit}; border-radius:${radius}; box-shadow: 0 10px 30px rgba(0,0,0,0.3); pointer-events:none; display:block;" />
+                <img src="${safeUrl}" alt="${escapeHTML(el.name || 'Image')}" style="width:100%; height:100%; object-fit:${fit}; border-radius:${radius}; box-shadow: 0 10px 30px rgba(0,0,0,0.3); pointer-events:none; display:block;" />
               </div>
             </div>
           `;
         }
         case 'video': {
           const radius = el.borderRadius ? `${el.borderRadius}px` : (style?.elements?.cardRadius || '12px');
+          const safeUrl = sanitizeUrl(content, '');
           return `
             <div class="universal-element element-video" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle}">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%; position:relative;">
-                <video src="${content}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; border-radius:${radius}; pointer-events:none; display:block;"></video>
+                <video src="${safeUrl}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; border-radius:${radius}; pointer-events:none; display:block;"></video>
               </div>
             </div>
           `;
@@ -207,7 +210,7 @@ export class UniversalSceneRenderer {
           return `
             <div class="universal-element element-shape" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle} cursor:pointer;">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%; background:${fill}; border:${border}; border-radius:${radius}; display:flex; align-items:center; justify-content:center; font-size:${el.fontSize || 32}px;">
-                ${content}
+                ${escapeHTML(content)}
               </div>
             </div>
           `;
@@ -244,7 +247,7 @@ export class UniversalSceneRenderer {
           return `
             <div class="universal-element element-text" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle} ${textBoundingStyle} font-family:${font}; font-size:${fluidFontSize}; font-weight:${weight}; color:${color}; text-align:${align}; letter-spacing:${letterSpacing}; line-height:${lineHeight}; cursor:pointer;">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%;">
-                ${content}
+                ${escapeHTML(content)}
               </div>
             </div>
           `;
