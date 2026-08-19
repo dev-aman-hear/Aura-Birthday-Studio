@@ -335,8 +335,6 @@ export const SCENE_ASSET_DEFINITIONS = {
     ]
   },
 
-  // 7. Dynamic Collage
-  collage: {
   // 7. Photo Collage
   collage: {
     sceneType: 'collage',
