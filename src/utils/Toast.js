@@ -1,10 +1,11 @@
-/**
- * Birthday Studio - Non-Blocking Toast & Modal Confirmation System
- * Replaces browser alert() and confirm() with modern toasts and popup confirmation modals
- */
+import { Accessibility } from './Accessibility.js';
 
 export class Toast {
   static show(message, type = 'info', duration = 3000) {
+    try {
+      Accessibility.announce(message, type === 'error' ? 'assertive' : 'polite');
+    } catch (e) {}
+
     let container = document.getElementById('toastContainer');
     if (!container) {
       container = document.createElement('div');
