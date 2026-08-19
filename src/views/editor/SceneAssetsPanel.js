@@ -337,9 +337,15 @@ export class SceneAssetsPanel {
 
   openPickerForSlot(slotId, isReplace = false) {
     const modal = new AssetPickerModal({
+      project: this.project,
       allAssets: this.allAssets,
       targetScene: this.scene,
       targetSlotId: slotId,
+      onProjectModified: () => {
+        this.onProjectModified();
+        const root = document.getElementById('sceneAssetsPanelRoot');
+        if (root) this.refreshInPlace(root);
+      },
       onSelectAsset: (asset) => {
         const res = SlotManager.assignAssetToSlot(this.scene, slotId, asset, this.allAssets);
         if (res.success) {

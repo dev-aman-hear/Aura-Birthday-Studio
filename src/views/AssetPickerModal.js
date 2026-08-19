@@ -7,15 +7,18 @@
 import { assetRepository } from '../services/AssetRepository.js';
 import { AssetCompatibilityValidator } from '../services/asset/AssetCompatibilityValidator.js';
 import { SceneAssetDefinitionService } from '../services/asset/SceneAssetDefinitions.js';
+import { AssetUsageTracker } from '../services/asset/AssetUsageTracker.js';
 import { Toast } from '../utils/Toast.js';
 import { Accessibility } from '../utils/Accessibility.js';
 
 export class AssetPickerModal {
   constructor(options = {}) {
+    this.project = options.project || null;
     this.allAssets = options.allAssets || [];
     this.targetScene = options.targetScene || null;
     this.targetSlotId = options.targetSlotId || null;
     this.onSelectAsset = options.onSelectAsset || (() => {});
+    this.onProjectModified = options.onProjectModified || (() => {});
     this.searchQuery = '';
     this.filterTab = 'compatible'; // 'compatible', 'all', 'image', 'video', 'audio', 'sticker'
     this.selectedAsset = null;
@@ -79,7 +82,7 @@ export class AssetPickerModal {
         <!-- Footer with Selection Details -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
           <div id="pickerSelectionDetails" style="font-size:0.75rem; color:var(--text-muted);">
-            Click an asset to select and assign.
+            Click an asset to select and assign. Use 🗑️ to remove user-added assets.
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-secondary btn-sm" id="btnCancelAssetPicker">Cancel</button>
@@ -142,6 +145,9 @@ export class AssetPickerModal {
       const src = asset.renderUrl || asset.thumbnail || asset.url || '';
       const meta = asset.metadata || {};
 
+      // Determine if asset is a removable user asset (not built-in/preset stock)
+      const isUserAsset = !asset.isBuiltIn && !asset.isPreset && !asset.isSample && (asset.source === 'upload' || asset.id.startsWith('asset_') || asset.isUserUploaded === true);
+
       return `
         <div class="modal-asset-card ${isCompat ? 'compatible' : 'incompatible'}" data-asset-id="${asset.id}" style="background:var(--surface, #100d1e); border:1px solid ${isCompat ? 'rgba(46, 213, 115, 0.3)' : 'rgba(255, 71, 87, 0.3)'}; border-radius:var(--radius-md, 8px); overflow:hidden; cursor:pointer; display:flex; flex-direction:column; position:relative; transition:all 0.15s ease;">
           <!-- Thumbnail -->
@@ -150,6 +156,13 @@ export class AssetPickerModal {
             ${isVid ? `<span style="font-size:2rem;">🎬</span>` : ''}
             ${isAud ? `<span style="font-size:2rem;">🎵</span>` : ''}
             ${!src && !isVid && !isAud ? `<span style="font-size:1.8rem;">📄</span>` : ''}
+
+            <!-- Delete/Remove button for user-added assets -->
+            ${isUserAsset ? `
+              <button class="btn-delete-asset-library" data-delete-asset-id="${asset.id}" title="Remove from Library" style="position:absolute; top:4px; left:4px; z-index:10; background:rgba(20, 16, 32, 0.85); border:1px solid rgba(255, 71, 87, 0.5); color:#ff4757; border-radius:4px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.75rem; padding:0; transition:all 0.15s ease;">
+                🗑️
+              </button>
+            ` : ''}
 
             <!-- Compatibility Badge -->
             <div style="position:absolute; top:4px; right:4px; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:4px; ${isCompat ? 'background:#2ed573; color:#000;' : 'background:#ff4757; color:#fff;'}">
@@ -184,7 +197,54 @@ export class AssetPickerModal {
     });
 
     // Category Filter Buttons
-    modal.addEventListener('click', (e) => {
+    modal.addEventListener('click', async (e) => {
+      // 1. Delete / Remove Asset from Library
+      const btnDelete = e.target.closest('[data-delete-asset-id]');
+      if (btnDelete) {
+        e.stopPropagation();
+        const assetId = btnDelete.dataset.deleteAssetId;
+        const asset = (this.allAssets || []).find(a => a.id === assetId);
+        if (!asset) return;
+
+        const usage = this.project ? AssetUsageTracker.getAssetUsage(assetId, this.project) : { count: 0, scenes: [] };
+        const promptMsg = usage.count > 0
+          ? `"${asset.name || 'This asset'}" is currently used in ${usage.count} scene(s). Remove it from the project library anyway?`
+          : `Remove "${asset.name || 'this asset'}" from your media library?`;
+
+        const confirmed = await Toast.confirm(promptMsg, 'Remove Asset');
+        if (!confirmed) return;
+
+        try {
+          // Detach references from project scenes safely
+          if (this.project) {
+            AssetUsageTracker.removeAssetFromProject(assetId, this.project);
+            if (Array.isArray(this.project.assetIds)) {
+              this.project.assetIds = this.project.assetIds.filter(id => id !== assetId);
+            }
+          }
+
+          // Delete from IndexedDB repository
+          await assetRepository.deleteAsset(assetId);
+
+          // Remove from local asset list
+          this.allAssets = (this.allAssets || []).filter(a => a.id !== assetId);
+
+          // Update picker view in place
+          this.renderAssetItems(modal);
+
+          // Notify project modified
+          if (this.onProjectModified) {
+            this.onProjectModified();
+          }
+
+          Toast.show('Asset removed from library', 'info');
+        } catch (err) {
+          console.error('Error removing asset:', err);
+          Toast.show('Failed to remove asset', 'error');
+        }
+        return;
+      }
+
       const btnFilter = e.target.closest('[data-filter]');
       if (btnFilter) {
         this.filterTab = btnFilter.dataset.filter;

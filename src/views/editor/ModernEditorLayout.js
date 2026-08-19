@@ -577,9 +577,15 @@ export class ModernEditorLayout {
   openAssetPickerForElement(el) {
     const activeScene = this.project.scenes?.find(s => s.id === this.selectedSceneId) || this.project.scenes?.[0];
     const modal = new AssetPickerModal({
+      project: this.project,
       allAssets: this.allAssets,
       targetScene: activeScene,
       targetSlotId: el?.slotId || null,
+      onProjectModified: () => {
+        this.onProjectModified();
+        this.storyCanvasView?.updateCanvasContent();
+        this.updateSmartInspector(activeScene, this.workspaceGrid);
+      },
       onSelectAsset: (asset) => {
         if (el && asset) {
           el.assetId = asset.id;
