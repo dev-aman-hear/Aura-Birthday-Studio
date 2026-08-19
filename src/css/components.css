@@ -146,20 +146,33 @@
   gap: 12px;
 }
 
-/* Editable Text Elements */
+/* Editable Text Elements (Visual Editor Only) */
 .editable-text-element {
   display: inline-block;
-  cursor: pointer;
   transition: outline 0.15s ease, transform 0.15s ease;
 }
 
-.editable-text-element:hover {
+/* Editor-specific interactive outlines */
+.modern-editor-root .editable-text-element,
+.story-canvas-container .editable-text-element,
+.story-editor-workspace .editable-text-element,
+.canvas-scene-container .editable-text-element {
+  cursor: pointer;
+}
+
+.modern-editor-root .editable-text-element:hover,
+.story-canvas-container .editable-text-element:hover,
+.story-editor-workspace .editable-text-element:hover,
+.canvas-scene-container .editable-text-element:hover {
   outline: 2px dashed rgba(127, 90, 240, 0.6);
   outline-offset: 4px;
   border-radius: 4px;
 }
 
-.editable-text-element:focus {
+.modern-editor-root .editable-text-element:focus,
+.story-canvas-container .editable-text-element:focus,
+.story-editor-workspace .editable-text-element:focus,
+.canvas-scene-container .editable-text-element:focus {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
   border-radius: 4px;

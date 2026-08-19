@@ -166,3 +166,21 @@
   pointer-events: none;
   z-index: 99;
 }
+
+/* Complete Editor Hover & Outline Isolation for Preview Player */
+.preview-player-overlay .editable-text-element,
+.preview-player-overlay .universal-element {
+  cursor: inherit !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  user-select: text;
+}
+
+.preview-player-overlay .editable-text-element:hover,
+.preview-player-overlay .universal-element:hover {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+

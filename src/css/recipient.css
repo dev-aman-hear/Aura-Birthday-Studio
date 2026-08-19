@@ -260,3 +260,32 @@
     padding: 28px 18px;
   }
 }
+
+/* Complete Editor Hover & Outline Isolation for Recipient Playback */
+.recipient-experience-container .editable-text-element,
+.recipient-standalone-viewport .editable-text-element,
+.recipient-story-frame .editable-text-element,
+#recipientStandaloneRoot .editable-text-element,
+.recipient-experience-container .universal-element,
+.recipient-standalone-viewport .universal-element,
+.recipient-story-frame .universal-element,
+#recipientStandaloneRoot .universal-element {
+  cursor: inherit !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  user-select: text;
+}
+
+.recipient-experience-container .editable-text-element:hover,
+.recipient-standalone-viewport .editable-text-element:hover,
+.recipient-story-frame .editable-text-element:hover,
+#recipientStandaloneRoot .editable-text-element:hover,
+.recipient-experience-container .universal-element:hover,
+.recipient-standalone-viewport .universal-element:hover,
+.recipient-story-frame .universal-element:hover,
+#recipientStandaloneRoot .universal-element:hover {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}

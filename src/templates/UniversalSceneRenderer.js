@@ -208,7 +208,7 @@ export class UniversalSceneRenderer {
           const border = el.border || `1px solid ${style?.colors?.border || 'rgba(255,255,255,0.2)'}`;
           const radius = el.borderRadius !== undefined ? `${el.borderRadius}px` : '50%';
           return `
-            <div class="universal-element element-shape" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle} cursor:pointer;">
+            <div class="universal-element element-shape" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle}">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%; background:${fill}; border:${border}; border-radius:${radius}; display:flex; align-items:center; justify-content:center; font-size:${el.fontSize || 32}px;">
                 ${escapeHTML(content)}
               </div>
@@ -245,7 +245,7 @@ export class UniversalSceneRenderer {
           const textBoundingStyle = `box-sizing: border-box; max-width: 92%; overflow-wrap: break-word; word-break: break-word;`;
 
           return `
-            <div class="universal-element element-text" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle} ${textBoundingStyle} font-family:${font}; font-size:${fluidFontSize}; font-weight:${weight}; color:${color}; text-align:${align}; letter-spacing:${letterSpacing}; line-height:${lineHeight}; cursor:pointer;">
+            <div class="universal-element element-text" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle} ${textBoundingStyle} font-family:${font}; font-size:${fluidFontSize}; font-weight:${weight}; color:${color}; text-align:${align}; letter-spacing:${letterSpacing}; line-height:${lineHeight};">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%;">
                 ${escapeHTML(content)}
               </div>
