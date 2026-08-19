@@ -187,7 +187,7 @@ export class UniversalSceneRenderer {
           return `
             <div class="universal-element element-image" data-element-id="${el.id}" data-text-id="${el.id}" style="${commonStyle}">
               <div class="element-anim-wrapper ${animClass}" style="width:100%; height:100%; position:relative;">
-                <img src="${safeUrl}" alt="${escapeHTML(el.name || 'Image')}" style="width:100%; height:100%; object-fit:${fit}; border-radius:${radius}; box-shadow: 0 10px 30px rgba(0,0,0,0.3); pointer-events:none; display:block;" />
+                <img src="${safeUrl}" alt="${escapeHTML(el.name || 'Image')}" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:${fit}; border-radius:${radius}; box-shadow: 0 10px 30px rgba(0,0,0,0.3); pointer-events:none; display:block;" />
               </div>
             </div>
           `;

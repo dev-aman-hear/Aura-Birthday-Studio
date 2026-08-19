@@ -38,7 +38,7 @@ export function renderGalleryTemplate(scene, project, assets = []) {
       <div class="gallery-grid">
         ${displayImages.map((img, idx) => `
           <div class="gallery-card" data-image-id="${img.id || `gallery-img-${idx}`}">
-            <img src="${img.renderUrl}" alt="${img.name || 'Memory'}" />
+            <img src="${img.renderUrl}" alt="${img.name || 'Memory'}" loading="lazy" decoding="async" />
             <div class="gallery-card-caption">${img.name || `Special Memory ${idx + 1}`}</div>
           </div>
         `).join('')}

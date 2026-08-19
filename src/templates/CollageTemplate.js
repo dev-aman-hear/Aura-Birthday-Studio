@@ -33,7 +33,7 @@ export function renderCollageTemplate(scene, project, assets = []) {
       <div class="collage-mesh">
         ${collageImgs.map((img, idx) => `
           <div class="collage-item collage-tilt-${(idx % 3) + 1}" data-collage-id="${img.id || `collage-item-${idx}`}">
-            <img src="${img.renderUrl}" alt="Collage Photo" />
+            <img src="${img.renderUrl}" alt="Collage Photo" loading="lazy" decoding="async" />
           </div>
         `).join('')}
       </div>
