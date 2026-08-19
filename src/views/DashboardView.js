@@ -166,10 +166,14 @@ export class DashboardView {
           <div class="welcome-hero-content">
             <div class="welcome-hero-text">
               <h2 class="welcome-title">${greeting}</h2>
-              <p class="welcome-subtitle">Create something unforgettable.</p>
+              <p class="welcome-subtitle">Create animated celebration stories, interactive photo memories, and community wish walls in minutes.</p>
             </div>
-            <div class="welcome-hero-actions">
-              <button class="btn btn-primary btn-hero-start" id="btnStartFromBlank">
+            <div class="welcome-hero-actions" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-primary btn-hero-start" id="btnDashNewCelebration">
+                <span class="btn-hero-icon">✨</span>
+                <span>+ Create Celebration</span>
+              </button>
+              <button class="btn btn-secondary btn-hero-start" id="btnStartFromBlank" style="background:var(--surface-elevated); border:1px solid var(--border);">
                 <span class="btn-hero-icon">✍️</span>
                 <span>Start From Blank</span>
               </button>
@@ -465,7 +469,7 @@ export class DashboardView {
     return `
       <div class="prebuilt-presets-tab-content">
         <!-- Category Filter Pills -->
-        <div class="preset-category-filter-bar" style="margin-bottom: 24px;">
+        <div class="preset-category-filter-bar" style="margin-bottom: 20px;">
           <div class="preset-category-filter-pills" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
             ${categories.map(cat => `
               <button class="btn btn-compact btn-preset-cat-filter ${this.activePresetCategory === cat.id ? 'btn-primary active' : 'btn-secondary'}" data-preset-cat="${cat.id}">
@@ -475,7 +479,16 @@ export class DashboardView {
           </div>
         </div>
 
-        <!-- Presets Grid (Previous View) -->
+        <!-- Helpful Onboarding Banner -->
+        <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:12px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.3rem;">🎨</span>
+          <div style="font-size:0.88rem; color:var(--text-muted);">
+            <strong style="color:var(--text); font-weight:700;">Ready-Made Starting Points:</strong>
+            Choose a preset design below. Once selected, you can customize every scene, text, and photo in the editor.
+          </div>
+        </div>
+
+        <!-- Presets Grid -->
         <div class="preset-cards-grid">
           ${filteredPresets.map(preset => this.renderPresetCard(preset)).join('')}
         </div>
@@ -864,7 +877,7 @@ export class DashboardView {
       }
 
       // 7. Start From Blank / Create A Design
-      if (e.target.closest('#btnStartFromBlank') || e.target.closest('#btnCreateNewDesign') || e.target.closest('#btnEmptyStateCreateDesign')) {
+      if (e.target.closest('#btnDashNewCelebration') || e.target.closest('#btnStartFromBlank') || e.target.closest('#btnCreateNewDesign') || e.target.closest('#btnEmptyStateCreateDesign')) {
         window.location.hash = '#wizard';
         return;
       }
