@@ -32,6 +32,80 @@ export function resolveMemoryPhoto(item, project = null) {
   return '';
 }
 
+export function resolveGiftContent(scene, project = null, allAssets = null) {
+  if (!scene || !scene.settings) {
+    return { hasContent: false, contentType: null, url: '', assetId: null, title: '', caption: '' };
+  }
+
+  const s = scene.settings;
+  const gb = s.giftBox || {};
+
+  const assetId = gb.contentAssetId || s.giftContentAssetId || s.giftPhotoAssetId || s.giftAssetId || null;
+  const explicitUrl = gb.contentUrl || s.giftContentUrl || s.giftPhotoUrl || s.giftUrl || '';
+  let contentType = gb.contentType || s.giftContentType || null;
+  const title = gb.title || s.giftTitle || s.coldCoffeeTitle || '';
+  const caption = gb.caption || s.giftCaption || s.coldCoffeeCaption || '';
+
+  let resolvedUrl = '';
+
+  // 1. Resolve from assetId in project.assets, allAssets, or SAMPLE_ASSETS
+  if (assetId) {
+    if (project?.assets && Array.isArray(project.assets)) {
+      const asset = project.assets.find(a => a.id === assetId);
+      if (asset) {
+        resolvedUrl = asset.renderUrl || asset.url || asset.thumbnail || '';
+        if (!contentType) {
+          contentType = asset.type === 'video' ? 'video' : 'image';
+        }
+      }
+    }
+    if (!resolvedUrl && allAssets && Array.isArray(allAssets)) {
+      const asset = allAssets.find(a => a.id === assetId);
+      if (asset) {
+        resolvedUrl = asset.renderUrl || asset.url || asset.thumbnail || '';
+        if (!contentType) {
+          contentType = asset.type === 'video' ? 'video' : 'image';
+        }
+      }
+    }
+    if (!resolvedUrl) {
+      const sample = SAMPLE_ASSETS.find(a => a.id === assetId);
+      if (sample) {
+        resolvedUrl = sample.renderUrl || sample.url || sample.thumbnail || '';
+        if (!contentType) {
+          contentType = sample.type === 'video' ? 'video' : 'image';
+        }
+      }
+    }
+  }
+
+  // 2. Fallback to direct URL if not resolved via assetId
+  if (!resolvedUrl && explicitUrl && typeof explicitUrl === 'string' && explicitUrl.trim() !== '') {
+    resolvedUrl = explicitUrl.trim();
+  }
+
+  // 3. Determine contentType if not yet set
+  if (resolvedUrl && !contentType) {
+    const lower = resolvedUrl.toLowerCase();
+    if (lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov') || lower.includes('/video') || lower.startsWith('data:video/')) {
+      contentType = 'video';
+    } else {
+      contentType = 'image';
+    }
+  }
+
+  const hasContent = Boolean(resolvedUrl && resolvedUrl.trim() !== '');
+
+  return {
+    hasContent,
+    contentType: hasContent ? (contentType || 'image') : null,
+    url: resolvedUrl,
+    assetId,
+    title,
+    caption
+  };
+}
+
 export class SpecialAnimationEngine {
   constructor() {
     this.hasGSAP = typeof window !== 'undefined' && typeof window.gsap !== 'undefined';
@@ -958,6 +1032,8 @@ export class SpecialAnimationEngine {
       const openBtn = container.querySelector('#btn-open-gift');
       const flash = container.querySelector('#scene8-flash-overlay');
       const canvas = container.querySelector('#gift-particles-canvas');
+      const revealedContainer = container.querySelector('#scene8-revealed-gift');
+      const continueBtn = container.querySelector('#btn-gift-continue');
 
       let isOpened = false;
 
@@ -968,11 +1044,71 @@ export class SpecialAnimationEngine {
         if (box) box.classList.add('opened');
         if (canvas) this.createParticleFountain(canvas);
 
+        if (flash) {
+          flash.classList.add('active');
+          this.registerTimer(setTimeout(() => flash.classList.remove('active'), 500));
+        }
+
+        const promptBox = container.querySelector('#scene8-prompt-box');
+        if (promptBox) promptBox.style.display = 'none';
+
         this.registerTimer(setTimeout(() => {
-          if (flash) flash.classList.add('active');
-          this.registerTimer(setTimeout(() => onNext(), 600));
-        }, 1200));
+          if (revealedContainer) {
+            revealedContainer.classList.add('active');
+
+            const img = revealedContainer.querySelector('#scene8-gift-img');
+            const video = revealedContainer.querySelector('#scene8-gift-video');
+            const loader = revealedContainer.querySelector('#scene8-gift-loader');
+            const errorDiv = revealedContainer.querySelector('#scene8-gift-error');
+
+            if (img) {
+              if (img.complete && img.naturalHeight !== 0) {
+                if (loader) loader.style.display = 'none';
+              } else {
+                img.onload = () => {
+                  if (loader) loader.style.display = 'none';
+                };
+                img.onerror = (err) => {
+                  console.error('[GiftBox] Failed to load gift image URL:', img.src, err);
+                  if (loader) loader.style.display = 'none';
+                  img.style.display = 'none';
+                  if (errorDiv) errorDiv.style.display = 'flex';
+                };
+              }
+            }
+
+            if (video) {
+              video.onloadeddata = () => {
+                if (loader) loader.style.display = 'none';
+                video.play().catch(() => {});
+              };
+              video.oncanplay = () => {
+                if (loader) loader.style.display = 'none';
+              };
+              video.onerror = (err) => {
+                console.error('[GiftBox] Failed to load gift video URL:', video.src, err);
+                if (loader) loader.style.display = 'none';
+                video.style.display = 'none';
+                if (errorDiv) errorDiv.style.display = 'flex';
+              };
+              if (video.readyState >= 2) {
+                if (loader) loader.style.display = 'none';
+                video.play().catch(() => {});
+              }
+            }
+          }
+        }, 750));
       };
+
+      if (continueBtn) {
+        continueBtn.onclick = () => {
+          const video = container.querySelector('#scene8-gift-video');
+          if (video) {
+            try { video.pause(); } catch (e) {}
+          }
+          onNext();
+        };
+      }
 
       if (this.hasGSAP && !this.checkReducedMotion()) {
         const tl = window.gsap.timeline({

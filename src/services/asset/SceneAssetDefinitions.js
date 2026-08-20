@@ -620,13 +620,14 @@ export const SCENE_ASSET_DEFINITIONS = {
   },
   special_3d_gift_reveal: {
     name: 'Gift Box Reveal',
-    description: '3D gift box unboxing with lid rotation, inner golden bloom and particle fountain.',
+    description: '3D gift box unboxing with lid rotation, inner golden bloom, and gift content reveal (photo or video).',
     icon: '🎁',
     assetRules: {
-      image: { min: 0, max: 1, required: false, formats: ['jpg', 'png', 'webp'], maxSizeMB: 15 }
+      image: { min: 0, max: 1, required: false, formats: ['jpg', 'png', 'webp', 'gif'], maxSizeMB: 25 },
+      video: { min: 0, max: 1, required: false, formats: ['mp4', 'webm', 'mov'], maxSizeMB: 50 }
     },
     slots: [
-      { id: 'gift_content', name: 'Gift Photo / Voucher', type: 'image', required: false, acceptedTypes: ['image'], formats: ['jpg', 'png', 'webp'] }
+      { id: 'gift_content', name: 'Gift Photo or Video', type: 'media', required: false, acceptedTypes: ['image', 'video'], formats: ['jpg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'] }
     ]
   },
   special_particle_reveal: {

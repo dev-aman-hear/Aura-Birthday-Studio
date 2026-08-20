@@ -69,7 +69,8 @@ import { WishModerationView } from '../views/WishModerationView.js';
 import { SceneEditorView } from '../views/SceneEditorView.js';
 import { assetRepository } from '../services/AssetRepository.js';
 import { AssetUsageTracker } from '../services/asset/AssetUsageTracker.js';
-import { resolveMemoryPhoto } from '../animations/SpecialAnimationEngine.js';
+import { resolveMemoryPhoto, resolveGiftContent } from '../animations/SpecialAnimationEngine.js';
+import { renderSpecial3DGiftReveal } from '../templates/special/SpecialSceneTemplates.js';
 import { SmartInspectorView } from '../views/editor/SmartInspectorView.js';
 import { SAMPLE_ASSETS } from '../data/SampleData.js';
 
@@ -86,7 +87,6 @@ import { AssetMetadataExtractor } from '../services/asset/AssetMetadataExtractor
 import { SceneAssetDefinitionService, SCENE_ASSET_DEFINITIONS } from '../services/asset/SceneAssetDefinitions.js';
 import { AssetCompatibilityValidator } from '../services/asset/AssetCompatibilityValidator.js';
 import { SlotManager } from '../services/asset/SlotManager.js';
-import { StyleRegistry } from '../data/styles/StyleRegistry.js';
 import { UniversalSceneRenderer } from '../templates/UniversalSceneRenderer.js';
 
 export class TestRunner {
@@ -1103,6 +1103,156 @@ export class TestRunner {
       const repubResult = await publishedProjectRepository.republishProject(reloadedProject, 7);
       const passPL7 = repubResult.id === origPubId && repubResult.durationDays === 7;
       results.push({ test: 'PL-7 — Republishing duration update preserves single permanent publication ID', pass: passPL7, detail: `Republished ID: ${repubResult.id}, durationDays: ${repubResult.durationDays}` });
+
+      // =========================================================================
+      // Phase 19: Gift Box Reveal & Media Attachment System (GB-1 - GB-11)
+      // =========================================================================
+
+      // GB-1: Gift Box + image -> resolves image URL with contentType: 'image'
+      const sceneWithImage = {
+        template: 'special_3d_gift_reveal',
+        settings: {
+          giftBox: {
+            enabled: true,
+            contentType: 'image',
+            contentAssetId: 'sample_photo_01',
+            contentUrl: '',
+            title: 'Birthday Gift Photo',
+            caption: 'A special moment'
+          }
+        }
+      };
+      const resolvedImgGift = resolveGiftContent(sceneWithImage, null, SAMPLE_ASSETS);
+      const passGB1 = resolvedImgGift.hasContent === true && resolvedImgGift.contentType === 'image' && Boolean(resolvedImgGift.url) && resolvedImgGift.title === 'Birthday Gift Photo';
+      results.push({ test: 'GB-1 — Gift Box with attached image resolves contentType "image" and valid URL', pass: passGB1, detail: `hasContent: ${resolvedImgGift.hasContent}, type: ${resolvedImgGift.contentType}, url: ${resolvedImgGift.url?.substring(0, 30)}...` });
+
+      // GB-2: Gift Box + video -> resolves video URL with contentType: 'video'
+      const sceneWithVideo = {
+        template: 'special_3d_gift_reveal',
+        settings: {
+          giftBox: {
+            enabled: true,
+            contentType: 'video',
+            contentUrl: 'https://cdn.example.com/birthday-surprise.mp4',
+            title: 'Birthday Surprise Video',
+            caption: 'Watch till the end!'
+          }
+        }
+      };
+      const resolvedVidGift = resolveGiftContent(sceneWithVideo);
+      const passGB2 = resolvedVidGift.hasContent === true && resolvedVidGift.contentType === 'video' && resolvedVidGift.url === 'https://cdn.example.com/birthday-surprise.mp4';
+      results.push({ test: 'GB-2 — Gift Box with attached video resolves contentType "video" and video URL', pass: passGB2, detail: `hasContent: ${resolvedVidGift.hasContent}, type: ${resolvedVidGift.contentType}, url: ${resolvedVidGift.url}` });
+
+      // GB-3: Gift Box with no content -> renders graceful fallback card without white screen
+      const sceneEmpty = {
+        template: 'special_3d_gift_reveal',
+        settings: {
+          promptText: 'Tap to open!'
+        }
+      };
+      const resolvedEmptyGift = resolveGiftContent(sceneEmpty);
+      const emptyHtml = renderSpecial3DGiftReveal(sceneEmpty, null, []);
+      const passGB3 = resolvedEmptyGift.hasContent === false && emptyHtml.includes('No gift added yet') && !emptyHtml.includes('undefined');
+      results.push({ test: 'GB-3 — Gift Box with no content renders graceful empty state card without white screen', pass: passGB3, detail: `hasContent: ${resolvedEmptyGift.hasContent}, fallback present: ${emptyHtml.includes('No gift added yet')}` });
+
+      // GB-4: Invalid media URL -> renders error container and loader for resilient playback
+      const sceneInvalid = {
+        template: 'special_3d_gift_reveal',
+        settings: {
+          giftBox: {
+            enabled: true,
+            contentType: 'image',
+            contentUrl: 'https://invalid-domain-xyz.com/nonexistent.jpg'
+          }
+        }
+      };
+      const invalidHtml = renderSpecial3DGiftReveal(sceneInvalid, null, []);
+      const passGB4 = invalidHtml.includes('scene8-media-error') && invalidHtml.includes('scene8-media-loader');
+      results.push({ test: 'GB-4 — Gift Box includes error fallback container and loading state without blank viewer', pass: passGB4, detail: `error container present: ${invalidHtml.includes('scene8-media-error')}` });
+
+      // GB-5: Publish celebration bundles Gift Box assets into snapshot
+      const projGB = projectRepository.createDefaultProject({ recipientName: 'GiftBoxTester' });
+      projGB.scenes.push({
+        id: 'scene_gift_test',
+        name: 'Secret Gift Box',
+        template: 'special_3d_gift_reveal',
+        duration: 10,
+        settings: {
+          giftBox: {
+            enabled: true,
+            contentType: 'image',
+            contentAssetId: 'sample_photo_02',
+            title: 'Gift Reveal',
+            caption: 'Enjoy your gift'
+          }
+        }
+      });
+      const pubGB = await publishedProjectRepository.publishProject(projGB, 'permanent');
+      const passGB5 = pubGB && Array.isArray(pubGB.snapshot.assets) && pubGB.snapshot.assets.some(a => a.id === 'sample_photo_02');
+      results.push({ test: 'GB-5 — Publishing celebration bundles Gift Box media assets into snapshot', pass: passGB5, detail: `Snapshot bundled assets count: ${pubGB?.snapshot?.assets?.length}` });
+
+      // GB-6: Standalone snapshot resolution in incognito/standalone mode
+      const snapshotGiftScene = pubGB.snapshot.scenes.find(s => s.template === 'special_3d_gift_reveal');
+      const resolvedSnapshotGift = resolveGiftContent(snapshotGiftScene, pubGB.snapshot);
+      const passGB6 = Boolean(resolvedSnapshotGift.url) && resolvedSnapshotGift.hasContent === true;
+      results.push({ test: 'GB-6 — Standalone published snapshot resolves Gift Box media without local DB dependency', pass: passGB6, detail: `Resolved URL: ${resolvedSnapshotGift.url?.substring(0, 40)}...` });
+
+      // GB-7: Video rendering attributes for mobile and desktop
+      const videoHtml = renderSpecial3DGiftReveal(sceneWithVideo, null, []);
+      const passGB7 = videoHtml.includes('playsinline') && videoHtml.includes('controls') && videoHtml.includes('autoplay') && videoHtml.includes('loop');
+      results.push({ test: 'GB-7 — Video player includes playsinline, controls, autoplay, and loop for responsive cross-device playback', pass: passGB7, detail: `playsinline: ${videoHtml.includes('playsinline')}, controls: ${videoHtml.includes('controls')}` });
+
+      // GB-8: Replacing image with another image updates references
+      const sceneReplaceImg = {
+        id: 'scene_replace_test',
+        template: 'special_3d_gift_reveal',
+        settings: {
+          giftBox: {
+            contentType: 'image',
+            contentAssetId: 'sample_photo_01'
+          }
+        }
+      };
+      const projReplace = { scenes: [sceneReplaceImg] };
+      AssetUsageTracker.replaceAssetInProject('sample_photo_01', 'sample_photo_03', projReplace);
+      const passGB8 = sceneReplaceImg.settings.giftBox.contentAssetId === 'sample_photo_03';
+      results.push({ test: 'GB-8 — Replacing image with another image updates Gift Box content asset reference', pass: passGB8, detail: `Updated asset ID: ${sceneReplaceImg.settings.giftBox.contentAssetId}` });
+
+      // GB-9: Replacing image with video switches content type cleanly
+      sceneReplaceImg.settings.giftBox = {
+        enabled: true,
+        contentType: 'video',
+        contentUrl: 'https://cdn.example.com/video2.mp4',
+        contentAssetId: null
+      };
+      const resolvedSwitched = resolveGiftContent(sceneReplaceImg);
+      const passGB9 = resolvedSwitched.contentType === 'video' && resolvedSwitched.url === 'https://cdn.example.com/video2.mp4';
+      results.push({ test: 'GB-9 — Replacing image with video switches contentType to video and updates media URL', pass: passGB9, detail: `contentType: ${resolvedSwitched.contentType}, url: ${resolvedSwitched.url}` });
+
+      // GB-10: Removing content clears references and restores graceful empty state
+      AssetUsageTracker.removeAssetFromProject('sample_photo_03', projReplace);
+      sceneReplaceImg.settings.giftBox = {
+        contentType: null,
+        contentAssetId: null,
+        contentUrl: ''
+      };
+      const resolvedCleared = resolveGiftContent(sceneReplaceImg);
+      const passGB10 = resolvedCleared.hasContent === false && resolvedCleared.url === '';
+      results.push({ test: 'GB-10 — Removing content clears media reference and returns to empty state', pass: passGB10, detail: `hasContent: ${resolvedCleared.hasContent}, url: "${resolvedCleared.url}"` });
+
+      // GB-11: Publishing and updating project updates Gift Box content on existing permanent link
+      const loadedPubGB = await projectRepository.getProject(projGB.id);
+      const giftSceneInProj = loadedPubGB.scenes.find(s => s.template === 'special_3d_gift_reveal');
+      giftSceneInProj.settings.giftBox = {
+        enabled: true,
+        contentType: 'video',
+        contentUrl: 'https://cdn.example.com/updated-surprise.mp4',
+        title: 'Updated Gift Title'
+      };
+      const pubGBUpdated = await publishedProjectRepository.publishProject(loadedPubGB);
+      const updatedSnapshotGift = pubGBUpdated.snapshot.scenes.find(s => s.template === 'special_3d_gift_reveal');
+      const passGB11 = pubGBUpdated.id === pubGB.id && updatedSnapshotGift.settings.giftBox.title === 'Updated Gift Title' && updatedSnapshotGift.settings.giftBox.contentType === 'video';
+      results.push({ test: 'GB-11 — Publishing and updating project preserves permanent link and updates Gift Box content', pass: passGB11, detail: `Publication ID: ${pubGBUpdated.id}, Snapshot title: "${updatedSnapshotGift.settings.giftBox.title}", type: "${updatedSnapshotGift.settings.giftBox.contentType}"` });
 
     } catch (globalErr) {
       console.error('Test Runner Error:', globalErr);

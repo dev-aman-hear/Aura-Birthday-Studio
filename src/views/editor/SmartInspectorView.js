@@ -12,6 +12,7 @@ import { SceneAssetsPanel } from './SceneAssetsPanel.js';
 import { getOrCreateTextElements } from '../../templates/TextElementHelper.js';
 import { AssetPickerModal } from '../AssetPickerModal.js';
 import { SAMPLE_ASSETS } from '../../data/SampleData.js';
+import { resolveGiftContent } from '../../animations/SpecialAnimationEngine.js';
 
 export class SmartInspectorView {
   constructor(options = {}) {
@@ -131,6 +132,81 @@ export class SmartInspectorView {
             <input type="text" class="form-input ${inputClass}" data-mem-idx="${idx}" data-field="${fieldType}" value="${item.photoUrl || ''}" placeholder="https://..." style="font-size:0.68rem; padding:2px 6px; width:100%; margin-top:2px;" />
           </details>
         </div>
+      </div>
+    `;
+  }
+
+  renderGiftBoxControl(scene) {
+    const gift = resolveGiftContent(scene, this.project, this.allAssets);
+    const hasMedia = gift.hasContent && Boolean(gift.url);
+    const isVideo = gift.contentType === 'video';
+
+    let mediaName = 'Attached Gift Media';
+    if (gift.assetId) {
+      const asset = (this.allAssets || []).find(a => a.id === gift.assetId);
+      if (asset?.name) mediaName = asset.name;
+    } else if (gift.url) {
+      try {
+        const u = new URL(gift.url);
+        const p = u.pathname.split('/').filter(Boolean);
+        if (p.length > 0) mediaName = p[p.length - 1];
+      } catch (e) {
+        mediaName = gift.url.length > 25 ? gift.url.substring(0, 22) + '...' : gift.url;
+      }
+    }
+
+    return `
+      <div style="background:var(--surface-elevated, #161328); border:1px solid rgba(226, 190, 122, 0.4); border-radius:10px; padding:12px; margin-top:12px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.78rem; font-weight:800; color:var(--accent-gold, #ffd700); display:flex; align-items:center; gap:6px;">
+            <span>🎁</span> <span>GIFT CONTENT (Revealed on Open)</span>
+          </span>
+          <span class="badge" style="font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; ${hasMedia ? (isVideo ? 'background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4);' : 'background:rgba(44,182,125,0.2); color:#2cb67d; border:1px solid rgba(44,182,125,0.4);') : 'background:rgba(255,255,255,0.08); color:var(--text-muted);'}">
+            ${hasMedia ? (isVideo ? '🎬 VIDEO ATTACHED' : '🖼️ IMAGE ATTACHED') : '⚪ NO GIFT ATTACHED'}
+          </span>
+        </div>
+
+        ${hasMedia ? `
+          <!-- Preview of Attached Content -->
+          <div style="position:relative; width:100%; border-radius:8px; overflow:hidden; background:#000; margin-bottom:8px; border:1px solid rgba(255,255,255,0.1); max-height:150px; display:flex; align-items:center; justify-content:center;">
+            ${isVideo ? `
+              <video src="${gift.url}" controls playsinline style="max-height:140px; max-width:100%; object-fit:contain; display:block;"></video>
+            ` : `
+              <img src="${gift.url}" alt="${mediaName}" style="max-height:140px; max-width:100%; object-fit:contain; display:block;" />
+            `}
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:0.72rem; color:var(--text-muted);">
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;" title="${mediaName}">📎 ${mediaName}</span>
+            <span style="font-weight:700; color:var(--accent-gold);">${(gift.contentType || 'MEDIA').toUpperCase()}</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-xs btn-spec-pick-gift-image" title="Replace with Image" style="flex:1; min-height:28px; font-size:0.72rem;">
+              🖼️ Replace Image
+            </button>
+            <button class="btn btn-secondary btn-xs btn-spec-pick-gift-video" title="Replace with Video" style="flex:1; min-height:28px; font-size:0.72rem;">
+              🎬 Replace Video
+            </button>
+            <button class="btn btn-ghost btn-xs btn-danger btn-spec-clear-gift" title="Remove Gift Content" style="min-height:28px; padding:0 8px;">
+              🗑️
+            </button>
+          </div>
+        ` : `
+          <!-- Empty State & Selection Buttons -->
+          <p style="font-size:0.74rem; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
+            Attach exactly one image or video to be unboxed inside the 3D gift box. If empty, a graceful surprise card is shown.
+          </p>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-primary btn-xs btn-spec-pick-gift-image" style="flex:1; min-height:30px; font-weight:700; font-size:0.74rem;">
+              🖼️ Attach Image
+            </button>
+            <button class="btn btn-secondary btn-xs btn-spec-pick-gift-video" style="flex:1; min-height:30px; font-weight:700; font-size:0.74rem;">
+              🎬 Attach Video
+            </button>
+          </div>
+        `}
       </div>
     `;
   }
@@ -1060,7 +1136,24 @@ export class SmartInspectorView {
         </div>
       `;
     } else if (t === 'special_3d_gift_reveal') {
+      const gift = resolveGiftContent(this.scene, this.project, this.allAssets);
       contentHtml = `
+        <!-- Gift Box Media Attachment Control -->
+        ${this.renderGiftBoxControl(this.scene)}
+
+        <div class="form-group" style="margin-top:8px;">
+          <label style="font-size:0.75rem; font-weight:700;">Surprise Title</label>
+          <input type="text" class="form-input" id="inspSpecSurpriseTitle" value="${gift.title || s.giftTitle || s.coldCoffeeTitle || 'A Special Surprise 🎁'}" placeholder="e.g. A Special Gift For You 🎁" />
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label style="font-size:0.75rem; font-weight:700;">Surprise Caption / Note</label>
+          <input type="text" class="form-input" id="inspSpecSurpriseCaption" value="${gift.caption || s.giftCaption || s.coldCoffeeCaption || ''}" placeholder="Personal note or voucher message..." />
+        </div>
+
+        <div style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); margin:12px 0 8px 0; padding-top:8px;">
+          <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">CINEMATIC INTRO & TEXT</span>
+        </div>
+
         <div class="form-group">
           <label style="font-size:0.75rem; font-weight:700;">Intro Line 1</label>
           <input type="text" class="form-input" id="inspSpecIntro1" value="${s.introLine1 || 'One last thing...'}" />
@@ -1078,16 +1171,8 @@ export class SmartInspectorView {
           <input type="text" class="form-input" id="inspSpecPrompt" value="${s.promptText || 'Something is waiting for you.'}" />
         </div>
         <div class="form-group" style="margin-top:8px;">
-          <label style="font-size:0.75rem; font-weight:700;">Button Text</label>
+          <label style="font-size:0.75rem; font-weight:700;">Box Button Text</label>
           <input type="text" class="form-input" id="inspSpecBtnText" value="${s.buttonText || 'TAP TO OPEN'}" />
-        </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label style="font-size:0.75rem; font-weight:700;">Surprise Memory Title</label>
-          <input type="text" class="form-input" id="inspSpecSurpriseTitle" value="${s.coldCoffeeTitle || 'A Special Cold Coffee Memory ☕'}" />
-        </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label style="font-size:0.75rem; font-weight:700;">Surprise Caption</label>
-          <input type="text" class="form-input" id="inspSpecSurpriseCaption" value="${s.coldCoffeeCaption || 'Because some simple memories with you taste like home.'}" />
         </div>
       `;
     } else if (t === 'special_birthday_reveal') {
@@ -1763,6 +1848,121 @@ export class SmartInspectorView {
         inspector.replaceWith(updated);
         return;
       }
+
+      // Gift Box Media Picker (Image)
+      if (e.target.closest('.btn-spec-pick-gift-image')) {
+        const modal = new AssetPickerModal({
+          project: this.project,
+          allAssets: this.allAssets,
+          targetScene: this.scene,
+          targetSlotId: 'gift_content',
+          filterTab: 'image',
+          type: 'image',
+          onProjectModified: () => {
+            if (this.onProjectModified) this.onProjectModified();
+          },
+          onSelectAsset: (asset) => {
+            if (asset) {
+              const url = asset.renderUrl || asset.thumbnail || asset.url || '';
+              this.scene.settings = this.scene.settings || {};
+              this.scene.settings.giftBox = {
+                enabled: true,
+                contentType: 'image',
+                contentAssetId: asset.id,
+                contentUrl: url,
+                title: this.scene.settings.giftBox?.title || this.scene.settings.giftTitle || this.scene.settings.coldCoffeeTitle || 'A Special Surprise 🎁',
+                caption: this.scene.settings.giftBox?.caption || this.scene.settings.giftCaption || this.scene.settings.coldCoffeeCaption || ''
+              };
+              this.scene.settings.giftContentType = 'image';
+              this.scene.settings.giftContentAssetId = asset.id;
+              this.scene.settings.giftContentUrl = url;
+
+              this.scene.assetIds = this.scene.assetIds || [];
+              if (!this.scene.assetIds.includes(asset.id)) {
+                this.scene.assetIds.push(asset.id);
+              }
+              this.project.assetIds = this.project.assetIds || [];
+              if (!this.project.assetIds.includes(asset.id)) {
+                this.project.assetIds.push(asset.id);
+              }
+              if (!this.allAssets.some(a => a.id === asset.id)) {
+                this.allAssets.unshift(asset);
+              }
+              notifyChange();
+              const updated = this.render();
+              inspector.replaceWith(updated);
+            }
+          }
+        });
+        document.body.appendChild(modal.render());
+        return;
+      }
+
+      // Gift Box Media Picker (Video)
+      if (e.target.closest('.btn-spec-pick-gift-video')) {
+        const modal = new AssetPickerModal({
+          project: this.project,
+          allAssets: this.allAssets,
+          targetScene: this.scene,
+          targetSlotId: 'gift_content',
+          filterTab: 'video',
+          type: 'video',
+          onProjectModified: () => {
+            if (this.onProjectModified) this.onProjectModified();
+          },
+          onSelectAsset: (asset) => {
+            if (asset) {
+              const url = asset.renderUrl || asset.url || '';
+              this.scene.settings = this.scene.settings || {};
+              this.scene.settings.giftBox = {
+                enabled: true,
+                contentType: 'video',
+                contentAssetId: asset.id,
+                contentUrl: url,
+                title: this.scene.settings.giftBox?.title || this.scene.settings.giftTitle || this.scene.settings.coldCoffeeTitle || 'A Special Surprise 🎁',
+                caption: this.scene.settings.giftBox?.caption || this.scene.settings.giftCaption || this.scene.settings.coldCoffeeCaption || ''
+              };
+              this.scene.settings.giftContentType = 'video';
+              this.scene.settings.giftContentAssetId = asset.id;
+              this.scene.settings.giftContentUrl = url;
+
+              this.scene.assetIds = this.scene.assetIds || [];
+              if (!this.scene.assetIds.includes(asset.id)) {
+                this.scene.assetIds.push(asset.id);
+              }
+              this.project.assetIds = this.project.assetIds || [];
+              if (!this.project.assetIds.includes(asset.id)) {
+                this.project.assetIds.push(asset.id);
+              }
+              if (!this.allAssets.some(a => a.id === asset.id)) {
+                this.allAssets.unshift(asset);
+              }
+              notifyChange();
+              const updated = this.render();
+              inspector.replaceWith(updated);
+            }
+          }
+        });
+        document.body.appendChild(modal.render());
+        return;
+      }
+
+      // Gift Box Media Clear
+      if (e.target.closest('.btn-spec-clear-gift')) {
+        this.scene.settings = this.scene.settings || {};
+        if (this.scene.settings.giftBox) {
+          this.scene.settings.giftBox.contentType = null;
+          this.scene.settings.giftBox.contentAssetId = null;
+          this.scene.settings.giftBox.contentUrl = '';
+        }
+        this.scene.settings.giftContentType = null;
+        this.scene.settings.giftContentAssetId = null;
+        this.scene.settings.giftContentUrl = '';
+        notifyChange();
+        const updated = this.render();
+        inspector.replaceWith(updated);
+        return;
+      }
     });
 
     inspector.addEventListener('input', (e) => {
@@ -1894,8 +2094,22 @@ export class SmartInspectorView {
         if (e.target.id === 'inspSpecTwist4') { this.scene.settings.oneLastText = e.target.value; this.scene.settings.twistLine4 = e.target.value; notifyChange(); }
 
         if (e.target.id === 'inspSpecPrompt') { this.scene.settings.promptText = e.target.value; notifyChange(); }
-        if (e.target.id === 'inspSpecSurpriseTitle') { this.scene.settings.coldCoffeeTitle = e.target.value; notifyChange(); }
-        if (e.target.id === 'inspSpecSurpriseCaption') { this.scene.settings.coldCoffeeCaption = e.target.value; notifyChange(); }
+        if (e.target.id === 'inspSpecSurpriseTitle') {
+          this.scene.settings.coldCoffeeTitle = e.target.value;
+          this.scene.settings.giftTitle = e.target.value;
+          if (this.scene.settings.giftBox) {
+            this.scene.settings.giftBox.title = e.target.value;
+          }
+          notifyChange();
+        }
+        if (e.target.id === 'inspSpecSurpriseCaption') {
+          this.scene.settings.coldCoffeeCaption = e.target.value;
+          this.scene.settings.giftCaption = e.target.value;
+          if (this.scene.settings.giftBox) {
+            this.scene.settings.giftBox.caption = e.target.value;
+          }
+          notifyChange();
+        }
 
         if (e.target.id === 'inspSpecHappyText') { this.scene.settings.happyText = e.target.value; notifyChange(); }
         if (e.target.id === 'inspSpecBirthdayText') { this.scene.settings.birthdayText = e.target.value; notifyChange(); }

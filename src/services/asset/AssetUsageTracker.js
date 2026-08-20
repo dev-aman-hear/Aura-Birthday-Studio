@@ -78,6 +78,10 @@ export class AssetUsageTracker {
           isUsed = true;
           matchedElements.push('Reveal Photo');
         }
+        if (scene.settings.giftBox?.contentAssetId === assetId || scene.settings.giftContentAssetId === assetId || scene.settings.giftPhotoAssetId === assetId || scene.settings.giftAssetId === assetId) {
+          isUsed = true;
+          matchedElements.push('Gift Box Content');
+        }
       }
 
       if (isUsed) {
@@ -185,6 +189,22 @@ export class AssetUsageTracker {
           scene.settings.revealPhotoAssetId = newAssetId;
           sceneModified = true;
         }
+        if (scene.settings.giftBox?.contentAssetId === oldAssetId) {
+          scene.settings.giftBox.contentAssetId = newAssetId;
+          sceneModified = true;
+        }
+        if (scene.settings.giftContentAssetId === oldAssetId) {
+          scene.settings.giftContentAssetId = newAssetId;
+          sceneModified = true;
+        }
+        if (scene.settings.giftPhotoAssetId === oldAssetId) {
+          scene.settings.giftPhotoAssetId = newAssetId;
+          sceneModified = true;
+        }
+        if (scene.settings.giftAssetId === oldAssetId) {
+          scene.settings.giftAssetId = newAssetId;
+          sceneModified = true;
+        }
       }
 
       if (sceneModified) {
@@ -285,6 +305,34 @@ export class AssetUsageTracker {
           scene.settings.revealPhotoAssetId = null;
           if (scene.settings.revealPhotoUrl && (scene.settings.revealPhotoUrl.startsWith('blob:') || scene.settings.revealPhotoUrl.startsWith('data:'))) {
             scene.settings.revealPhotoUrl = '';
+          }
+          changed = true;
+        }
+        if (scene.settings.giftBox?.contentAssetId === assetId) {
+          scene.settings.giftBox.contentAssetId = null;
+          if (scene.settings.giftBox.contentUrl && (scene.settings.giftBox.contentUrl.startsWith('blob:') || scene.settings.giftBox.contentUrl.startsWith('data:'))) {
+            scene.settings.giftBox.contentUrl = '';
+          }
+          changed = true;
+        }
+        if (scene.settings.giftContentAssetId === assetId) {
+          scene.settings.giftContentAssetId = null;
+          if (scene.settings.giftContentUrl && (scene.settings.giftContentUrl.startsWith('blob:') || scene.settings.giftContentUrl.startsWith('data:'))) {
+            scene.settings.giftContentUrl = '';
+          }
+          changed = true;
+        }
+        if (scene.settings.giftPhotoAssetId === assetId) {
+          scene.settings.giftPhotoAssetId = null;
+          if (scene.settings.giftPhotoUrl && (scene.settings.giftPhotoUrl.startsWith('blob:') || scene.settings.giftPhotoUrl.startsWith('data:'))) {
+            scene.settings.giftPhotoUrl = '';
+          }
+          changed = true;
+        }
+        if (scene.settings.giftAssetId === assetId) {
+          scene.settings.giftAssetId = null;
+          if (scene.settings.giftUrl && (scene.settings.giftUrl.startsWith('blob:') || scene.settings.giftUrl.startsWith('data:'))) {
+            scene.settings.giftUrl = '';
           }
           changed = true;
         }

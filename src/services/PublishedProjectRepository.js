@@ -145,6 +145,10 @@ export class PublishedProjectRepository {
               if (s.settings.revealPhotoAssetId) {
                 relevantAssetIds.add(s.settings.revealPhotoAssetId);
               }
+              const giftAssetId = s.settings.giftBox?.contentAssetId || s.settings.giftContentAssetId || s.settings.giftPhotoAssetId || s.settings.giftAssetId;
+              if (giftAssetId) {
+                relevantAssetIds.add(giftAssetId);
+              }
             }
           });
 
@@ -221,6 +225,15 @@ export class PublishedProjectRepository {
               }
               if (s.settings.revealPhotoAssetId && assetUrlMap.has(s.settings.revealPhotoAssetId)) {
                 s.settings.revealPhotoUrl = assetUrlMap.get(s.settings.revealPhotoAssetId);
+              }
+              const giftAssetId = s.settings.giftBox?.contentAssetId || s.settings.giftContentAssetId || s.settings.giftPhotoAssetId || s.settings.giftAssetId;
+              if (giftAssetId && assetUrlMap.has(giftAssetId)) {
+                const publicUrl = assetUrlMap.get(giftAssetId);
+                if (s.settings.giftBox) {
+                  s.settings.giftBox.contentUrl = publicUrl;
+                }
+                s.settings.giftContentUrl = publicUrl;
+                s.settings.giftPhotoUrl = publicUrl;
               }
             }
           });

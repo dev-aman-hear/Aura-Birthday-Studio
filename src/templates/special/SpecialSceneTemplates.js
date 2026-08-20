@@ -5,6 +5,7 @@
  */
 
 import { PresetService } from '../../services/PresetService.js';
+import { resolveGiftContent } from '../../animations/SpecialAnimationEngine.js';
 
 export function renderSpecialCinematicIntro(scene, project, assets, options = {}) {
   const replacements = getReplacements(scene, project, assets);
@@ -328,6 +329,70 @@ export function renderSpecial3DGiftReveal(scene, project, assets, options = {}) 
   const promptText = PresetService.interpolate(scene.settings?.promptText || 'Something is waiting for you.', replacements);
   const btnText = PresetService.interpolate(scene.settings?.buttonText || 'TAP TO OPEN', replacements);
 
+  const gift = resolveGiftContent(scene, project, assets);
+  const giftTitle = PresetService.interpolate(gift.title || scene.settings?.giftTitle || scene.settings?.coldCoffeeTitle || 'A Special Surprise 🎁', replacements);
+  const giftCaption = PresetService.interpolate(gift.caption || scene.settings?.giftCaption || scene.settings?.coldCoffeeCaption || '', replacements);
+
+  let mediaHtml = '';
+  if (gift.hasContent && gift.url) {
+    if (gift.contentType === 'video') {
+      mediaHtml = `
+        <div class="scene8-media-wrapper video-wrapper">
+          <div class="scene8-media-loader" id="scene8-gift-loader">
+            <div class="spinner-sm"></div>
+            <span>Loading gift video...</span>
+          </div>
+          <video
+            id="scene8-gift-video"
+            class="scene8-gift-video"
+            src="${gift.url}"
+            controls
+            playsinline
+            autoplay
+            loop
+            preload="auto"
+            style="max-width:100%; max-height:46vh; border-radius:12px; display:block; object-fit:contain;"
+          ></video>
+          <div class="scene8-media-error" id="scene8-gift-error" style="display:none;">
+            <span style="font-size:2rem;">⚠️</span>
+            <p style="margin:4px 0 0 0; font-weight:700;">Gift content couldn't be loaded.</p>
+          </div>
+        </div>
+      `;
+    } else {
+      mediaHtml = `
+        <div class="scene8-media-wrapper image-wrapper">
+          <div class="scene8-media-loader" id="scene8-gift-loader">
+            <div class="spinner-sm"></div>
+            <span>Loading gift photo...</span>
+          </div>
+          <img
+            id="scene8-gift-img"
+            class="scene8-gift-img"
+            src="${gift.url}"
+            alt="${giftTitle}"
+            loading="eager"
+            style="max-width:100%; max-height:46vh; border-radius:12px; display:block; object-fit:contain;"
+          />
+          <div class="scene8-media-error" id="scene8-gift-error" style="display:none;">
+            <span style="font-size:2rem;">⚠️</span>
+            <p style="margin:4px 0 0 0; font-weight:700;">Gift content couldn't be loaded.</p>
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    mediaHtml = `
+      <div class="scene8-media-wrapper empty-wrapper">
+        <div class="scene8-gift-empty-fallback">
+          <div style="font-size:3.2rem; margin-bottom:6px;">🎁</div>
+          <h4 style="font-size:1.15rem; font-weight:800; color:var(--accent-gold, #ffd700); margin:0;">No gift added yet</h4>
+          <p style="font-size:0.85rem; color:#cbd5e1; margin-top:6px; max-width:320px;">A special surprise memory is being prepared for you.</p>
+        </div>
+      </div>
+    `;
+  }
+
   return `
     <div class="special-scene-viewport" id="scene-8">
       <div class="film-grain-overlay"></div>
@@ -345,7 +410,7 @@ export function renderSpecial3DGiftReveal(scene, project, assets, options = {}) 
 
         <!-- Stage 2: 3D Gift Box -->
         <div class="scene8-gift-stage" id="scene8-gift-stage">
-          <div class="scene8-gift-3d" id="scene8-gift-3d" role="button" aria-label="Open Birthday Gift">
+          <div class="scene8-gift-3d" id="scene8-gift-3d" role="button" aria-label="Open Birthday Gift" tabindex="0">
             <div class="gift-body">
               <div class="ribbon-v"></div>
               <div class="ribbon-h"></div>
@@ -364,6 +429,23 @@ export function renderSpecial3DGiftReveal(scene, project, assets, options = {}) 
           <div class="scene8-prompt-box" id="scene8-prompt-box">
             <p class="scene8-prompt-text" id="scene8-prompt-text">${promptText}</p>
             <button id="btn-open-gift" class="btn-begin-cinematic scene8-open-btn">${btnText}</button>
+          </div>
+        </div>
+
+        <!-- Stage 3: Revealed Gift Content Container -->
+        <div class="scene8-revealed-gift-container" id="scene8-revealed-gift" aria-live="polite">
+          <div class="scene8-gift-card">
+            ${giftTitle ? `<h3 class="scene8-gift-title">${giftTitle}</h3>` : ''}
+            
+            <div class="scene8-gift-media-box" id="scene8-gift-media-box">
+              ${mediaHtml}
+            </div>
+
+            ${giftCaption ? `<p class="scene8-gift-caption">${giftCaption}</p>` : ''}
+
+            <div class="scene8-gift-actions">
+              <button id="btn-gift-continue" class="btn-begin-cinematic scene8-continue-btn">CONTINUE →</button>
+            </div>
           </div>
         </div>
       </div>
