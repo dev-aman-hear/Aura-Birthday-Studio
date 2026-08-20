@@ -25,12 +25,16 @@ export class PublishPreflightView {
       { label: 'Celebration Finale Scene Included', pass: hasFinale, warn: 'No grand finale closing scene' }
     ];
 
+    const isPublished = Boolean(this.project?.published || this.project?.publicationId);
+
     modal.innerHTML = `
       <div class="wizard-modal" style="max-width:520px; padding:24px;">
         <div style="text-align:center; margin-bottom:16px;">
           <div style="font-size:2.5rem; margin-bottom:4px;">🚀</div>
           <h3 style="font-size:1.3rem; font-weight:800;">Celebration Pre-Flight Check</h3>
-          <p style="color:var(--text-muted); font-size:0.85rem; margin-top:2px;">Reviewing your celebration before generating the 7-day public link.</p>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-top:2px;">
+            ${isPublished ? 'Reviewing your celebration before updating your live link.' : 'Reviewing your celebration before generating the public link.'}
+          </p>
         </div>
 
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
@@ -46,7 +50,9 @@ export class PublishPreflightView {
 
         <div style="display:flex; gap:10px; justify-content:center;">
           <button class="btn btn-secondary" id="btnCancelPreflight">Cancel</button>
-          <button class="btn btn-success" id="btnConfirmPublishAnyway">🚀 Publish Anyway</button>
+          <button class="btn btn-success" id="btnConfirmPublishAnyway">
+            🚀 ${isPublished ? 'Update Link Anyway' : 'Publish Anyway'}
+          </button>
         </div>
       </div>
     `;

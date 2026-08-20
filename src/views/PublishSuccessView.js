@@ -8,9 +8,10 @@ import { Accessibility } from '../utils/Accessibility.js';
 import { Toast } from '../utils/Toast.js';
 
 export class PublishSuccessView {
-  constructor(publication, onReturnDashboard = (() => {})) {
+  constructor(publication, onReturnDashboard = (() => {}), isUpdate = false) {
     this.publication = publication;
     this.onReturnDashboard = onReturnDashboard;
+    this.isUpdate = isUpdate;
   }
 
   render() {
@@ -35,15 +36,17 @@ export class PublishSuccessView {
     });
     const durationDays = this.publication.durationDays || (this.publication.expiresAt ? Math.max(1, Math.round((this.publication.expiresAt - this.publication.publishedAt) / (24 * 60 * 60 * 1000))) : null);
 
-    const statusText = isPermanent
-      ? `Created for <strong>${recipName}</strong> • ✨ <strong>Permanent Link (Never expires)</strong>`
-      : `Created for <strong>${recipName}</strong> • Active for <strong>${durationDays} Day${durationDays === 1 ? '' : 's'}</strong> (Expires: ${expireDateStr})`;
+    const statusText = this.isUpdate
+      ? `Link updated for <strong>${recipName}</strong> • Live celebration reflects all your latest changes. The public link remains unchanged.`
+      : isPermanent
+        ? `Created for <strong>${recipName}</strong> • ✨ <strong>Permanent Link (Never expires)</strong>`
+        : `Created for <strong>${recipName}</strong> • Active for <strong>${durationDays} Day${durationDays === 1 ? '' : 's'}</strong> (Expires: ${expireDateStr})`;
 
     modal.innerHTML = `
       <div class="wizard-modal text-center" style="max-width:540px; padding:28px; position:relative;">
         <button class="btn btn-ghost btn-icon" id="btnCloseSuccessModal" aria-label="Close modal" style="position:absolute; top:16px; right:16px; font-size:1.1rem; width:36px; height:36px;">✕</button>
-        <div style="font-size:3rem; margin-bottom:4px;">🎉</div>
-        <h2 style="font-size:1.6rem; font-weight:900;">Your Celebration is Live!</h2>
+        <div style="font-size:3rem; margin-bottom:4px;">${this.isUpdate ? '✨' : '🎉'}</div>
+        <h2 style="font-size:1.6rem; font-weight:900;">${this.isUpdate ? 'Celebration Link Updated!' : 'Your Celebration is Live!'}</h2>
         <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">
           ${statusText}
         </p>

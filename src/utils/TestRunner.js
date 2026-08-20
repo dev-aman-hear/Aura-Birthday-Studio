@@ -67,6 +67,11 @@ import { TopNavView } from '../views/TopNavView.js';
 import { StyleSelectionView } from '../views/StyleSelectionView.js';
 import { WishModerationView } from '../views/WishModerationView.js';
 import { SceneEditorView } from '../views/SceneEditorView.js';
+import { assetRepository } from '../services/AssetRepository.js';
+import { AssetUsageTracker } from '../services/asset/AssetUsageTracker.js';
+import { resolveMemoryPhoto } from '../animations/SpecialAnimationEngine.js';
+import { SmartInspectorView } from '../views/editor/SmartInspectorView.js';
+import { SAMPLE_ASSETS } from '../data/SampleData.js';
 
 import { ReleaseDiagnosticsService } from '../services/ReleaseDiagnosticsService.js';
 import { ReleaseDiagnosticsView } from '../views/ReleaseDiagnosticsView.js';
@@ -967,6 +972,138 @@ export class TestRunner {
       const multiDeviceElem = await recipientMultiDevice.render();
       const passSP10 = multiDeviceElem.id === 'recipientStandaloneRoot' && recipientMultiDevice.project.recipient.name === project.recipient.name;
       results.push({ test: 'SP10 — Multi-Device Snapshot Independence (Zero Local Creator Dependency)', pass: passSP10, detail: `Rendered standalone recipient root: ${passSP10}` });
+
+      // =========================================================================
+      // Phase 17: Timeline Memories Asset Integration (TEST A - J)
+      // =========================================================================
+
+      // Test A: Create memory with an existing Asset ID
+      const memTestA = { year: '2015', title: 'College Days', caption: 'Memories of late night talks', photoAssetId: 'sample_photo_01', photoUrl: '' };
+      const resolvedUrlA = resolveMemoryPhoto(memTestA, null);
+      const passTestA = Boolean(resolvedUrlA) && resolvedUrlA.includes('images.unsplash.com');
+      results.push({ test: 'TM-A — Create memory with an existing Asset ID', pass: passTestA, detail: `Resolved URL: ${resolvedUrlA?.substring(0, 40)}...` });
+
+      // Test B: Save and reload project with memory asset reference
+      const projMem = projectRepository.createDefaultProject({ recipientName: 'TimelineTester' });
+      const timelineScene = projMem.scenes.find(s => s.template === 'special_memory_sequence') || projMem.scenes[0];
+      timelineScene.settings = timelineScene.settings || {};
+      timelineScene.settings.memories = [
+        { year: '2018', title: 'Road Trip', caption: 'Exploring the hills', photoAssetId: 'sample_photo_02', photoUrl: '' },
+        { year: '2020', title: 'Graduation', caption: 'The big day', photoAssetId: 'sample_photo_03', photoUrl: '' }
+      ];
+      await projectRepository.saveProject(projMem, 'tester');
+      const loadedProjMem = await projectRepository.getProject(projMem.id);
+      const loadedMemScene = loadedProjMem?.scenes.find(s => s.id === timelineScene.id);
+      const passTestB = loadedMemScene?.settings?.memories?.[0]?.photoAssetId === 'sample_photo_02' && loadedMemScene?.settings?.memories?.[1]?.photoAssetId === 'sample_photo_03';
+      results.push({ test: 'TM-B — Save and reload editor with memory asset reference intact', pass: passTestB, detail: `Loaded memory asset IDs: ${loadedMemScene?.settings?.memories?.map(m => m.photoAssetId).join(', ')}` });
+
+      // Test C: Edit memory and replace asset
+      loadedMemScene.settings.memories[0].photoAssetId = 'sample_photo_04';
+      const resolvedUrlC = resolveMemoryPhoto(loadedMemScene.settings.memories[0], loadedProjMem);
+      const passTestC = loadedMemScene.settings.memories[0].photoAssetId === 'sample_photo_04' && Boolean(resolvedUrlC);
+      results.push({ test: 'TM-C — Edit memory and replace asset reference', pass: passTestC, detail: `Replaced to asset: ${loadedMemScene.settings.memories[0].photoAssetId}` });
+
+      // Test D: Remove/clear selected asset from memory
+      loadedMemScene.settings.memories[0].photoAssetId = null;
+      loadedMemScene.settings.memories[0].photoUrl = '';
+      const resolvedUrlD = resolveMemoryPhoto(loadedMemScene.settings.memories[0], loadedProjMem);
+      const passTestD = loadedMemScene.settings.memories[0].photoAssetId === null && resolvedUrlD === '';
+      results.push({ test: 'TM-D — Remove and clear selected asset from memory', pass: passTestD, detail: `Cleared asset, resolved photo: "${resolvedUrlD}"` });
+
+      // Test E: Existing memory containing only external photoUrl (Backward Compatibility)
+      const legacyMem = { year: '2012', title: 'Old Days', caption: 'Legacy photo', photoUrl: 'https://images.unsplash.com/legacy-photo-test' };
+      const resolvedUrlE = resolveMemoryPhoto(legacyMem, null);
+      const passTestE = resolvedUrlE === 'https://images.unsplash.com/legacy-photo-test';
+      results.push({ test: 'TM-E — Backward compatibility with legacy memory containing only photoUrl', pass: passTestE, detail: `Resolved legacy external URL: ${resolvedUrlE}` });
+
+      // Test F: Publish celebration bundles Timeline Memory assets into snapshot
+      projMem.scenes[0].settings = projMem.scenes[0].settings || {};
+      projMem.scenes[0].settings.memories = [
+        { year: '2019', title: 'Summer Camp', caption: 'Campfire nights', photoAssetId: 'sample_photo_01', photoUrl: '' }
+      ];
+      const pubMem = await publishedProjectRepository.publishProject(projMem, 'permanent');
+      const passTestF = pubMem && Array.isArray(pubMem.snapshot.assets) && pubMem.snapshot.assets.some(a => a.id === 'sample_photo_01');
+      results.push({ test: 'TM-F — Publish celebration bundles Timeline Memory assets into snapshot', pass: passTestF, detail: `Snapshot bundled assets count: ${pubMem?.snapshot?.assets?.length}` });
+
+      // Test G: Multi-Device Published Snapshot Photo Resolution (Zero Local Storage Dependency)
+      const snapshotMemScene = pubMem.snapshot.scenes.find(s => s.settings?.memories);
+      const snapshotMem = snapshotMemScene?.settings?.memories?.[0];
+      const resolvedSnapshotUrl = resolveMemoryPhoto(snapshotMem, pubMem.snapshot);
+      const passTestG = Boolean(resolvedSnapshotUrl) && resolvedSnapshotUrl.length > 0;
+      results.push({ test: 'TM-G — Published snapshot photo resolution without local storage dependency', pass: passTestG, detail: `Resolved snapshot URL: ${resolvedSnapshotUrl?.substring(0, 40)}...` });
+
+      // Test H: AssetUsageTracker detects Timeline Memory referencing asset ID
+      const usageDetected = AssetUsageTracker.getAssetUsage('sample_photo_01', projMem);
+      const passTestH = usageDetected.count > 0 && usageDetected.scenes.some(s => s.elements.some(el => el.includes('Timeline Memory')));
+      results.push({ test: 'TM-H — AssetUsageTracker detects Timeline Memory referencing asset ID', pass: passTestH, detail: `Detected in ${usageDetected.count} scene(s): ${JSON.stringify(usageDetected.scenes[0]?.elements)}` });
+
+      // Test I: AssetUsageTracker safely detaches asset from Timeline Memory when deleted
+      AssetUsageTracker.removeAssetFromProject('sample_photo_01', projMem);
+      const detachedMem = projMem.scenes[0].settings.memories[0];
+      const passTestI = detachedMem.photoAssetId === null && resolveMemoryPhoto(detachedMem, projMem) === '';
+      results.push({ test: 'TM-I — AssetUsageTracker safely detaches asset on delete without broken images', pass: passTestI, detail: `Detached photoAssetId: ${detachedMem.photoAssetId}` });
+
+      // Test J: Create memory without a photo (graceful empty state)
+      const emptyMem = { year: '2026', title: 'Future Dream', caption: 'No photo yet' };
+      const resolvedEmpty = resolveMemoryPhoto(emptyMem, null);
+      const passTestJ = resolvedEmpty === '';
+      results.push({ test: 'TM-J — Create memory without photo handles empty state gracefully', pass: passTestJ, detail: `Empty state resolved URL: "${resolvedEmpty}"` });
+
+      // =========================================================================
+      // Phase 18: Single Permanent Published Link & Update Link (PL-1 - PL-7)
+      // =========================================================================
+
+      // PL-1: First publish creates publication ID and sets persistent project state
+      const projPL1 = projectRepository.createDefaultProject({ recipientName: 'SingleLinkTester' });
+      const initialPublished = Boolean(projPL1.published);
+      const initialPubId = projPL1.publicationId;
+      const pubFirst = await publishedProjectRepository.publishProject(projPL1, 'permanent');
+      const loadedAfterFirst = await projectRepository.getProject(projPL1.id);
+      const passPL1 = !initialPublished && !initialPubId && Boolean(pubFirst?.id) && loadedAfterFirst?.published === true && loadedAfterFirst?.publicationId === pubFirst.id;
+      results.push({ test: 'PL-1 — First publish creates unique publication ID and sets persistent project state', pass: passPL1, detail: `pubId: ${pubFirst?.id}, loaded project published: ${loadedAfterFirst?.published}, pubId: ${loadedAfterFirst?.publicationId}` });
+
+      // PL-2: Update link preserves EXACT same publication ID and URL
+      const origPubId = pubFirst.id;
+      const origUrl = ShareService.getShareUrl(origPubId);
+      loadedAfterFirst.recipient.name = 'SingleLinkTester Updated';
+      loadedAfterFirst.scenes[0].name = 'Opening Scene Updated';
+      const pubUpdate = await publishedProjectRepository.publishProject(loadedAfterFirst);
+      const updatedUrl = ShareService.getShareUrl(pubUpdate.id);
+      const passPL2 = pubUpdate.id === origPubId && updatedUrl === origUrl;
+      results.push({ test: 'PL-2 — Updating published project preserves exact same publication ID and URL', pass: passPL2, detail: `Original ID: ${origPubId} === Updated ID: ${pubUpdate.id}, URL invariant: ${passPL2}` });
+
+      // PL-3: Updated snapshot contains latest scene & recipient edits
+      const loadedPubRecord = await dbService.get('published_projects', origPubId);
+      const passPL3 = loadedPubRecord?.snapshot?.recipient?.name === 'SingleLinkTester Updated' && loadedPubRecord?.snapshot?.scenes?.[0]?.name === 'Opening Scene Updated';
+      results.push({ test: 'PL-3 — Updated celebration snapshot reflects latest edits in-place', pass: passPL3, detail: `Snapshot recipient: "${loadedPubRecord?.snapshot?.recipient?.name}", Scene 1: "${loadedPubRecord?.snapshot?.scenes?.[0]?.name}"` });
+
+      // PL-4: Persistent published state restored upon reload/reopen
+      const reloadedProject = await projectRepository.getProject(loadedAfterFirst.id);
+      const canonicalPub = await publishedProjectRepository.getCanonicalPublicationForProject(reloadedProject.id);
+      const isPublishedState = Boolean(reloadedProject.published || reloadedProject.publicationId);
+      const passPL4 = isPublishedState === true && canonicalPub?.id === origPubId;
+      results.push({ test: 'PL-4 — Reopening project correctly resolves canonical publication ID and published state', pass: passPL4, detail: `isPublished: ${isPublishedState}, canonical ID: ${canonicalPub?.id}` });
+
+      // PL-5: Concurrent / double-publish race condition lock protection
+      const [concPubA, concPubB] = await Promise.all([
+        publishedProjectRepository.publishProject(reloadedProject),
+        publishedProjectRepository.publishProject(reloadedProject)
+      ]);
+      const passPL5 = concPubA.id === origPubId && concPubB.id === origPubId;
+      results.push({ test: 'PL-5 — Concurrent publish calls deduplicated safely by in-memory lock', pass: passPL5, detail: `Promise A ID: ${concPubA.id}, Promise B ID: ${concPubB.id}` });
+
+      // PL-6: Legacy duplicate publications consolidated to single canonical ID
+      const dupFakeId = `pub_fake_dup_${Date.now()}`;
+      await dbService.put('published_projects', { id: dupFakeId, projectId: reloadedProject.id, publishedAt: Date.now() - 50000 });
+      await publishedProjectRepository.consolidateDuplicatePublications(reloadedProject.id, origPubId);
+      const remainingPubs = (await dbService.getAll('published_projects')).filter(p => (p.projectId === reloadedProject.id || p.project_id === reloadedProject.id));
+      const passPL6 = remainingPubs.length === 1 && remainingPubs[0].id === origPubId;
+      results.push({ test: 'PL-6 — Legacy duplicate publication records consolidated to primary canonical ID', pass: passPL6, detail: `Remaining publications for project: ${remainingPubs.length} (ID: ${remainingPubs[0]?.id})` });
+
+      // PL-7: Republishing duration update preserves existing publication ID
+      const repubResult = await publishedProjectRepository.republishProject(reloadedProject, 7);
+      const passPL7 = repubResult.id === origPubId && repubResult.durationDays === 7;
+      results.push({ test: 'PL-7 — Republishing duration update preserves single permanent publication ID', pass: passPL7, detail: `Republished ID: ${repubResult.id}, durationDays: ${repubResult.durationDays}` });
 
     } catch (globalErr) {
       console.error('Test Runner Error:', globalErr);

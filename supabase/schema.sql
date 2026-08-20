@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.published_projects (
 -- Indices for rapid public lookups
 CREATE INDEX IF NOT EXISTS idx_published_projects_is_public ON public.published_projects(is_public);
 CREATE INDEX IF NOT EXISTS idx_published_projects_project_id ON public.published_projects(project_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_published_projects_project_id_unique ON public.published_projects(project_id) WHERE project_id IS NOT NULL AND project_id != '';
 CREATE INDEX IF NOT EXISTS idx_published_projects_expires_at ON public.published_projects(expires_at);
 
 -- Enable Row Level Security (RLS)

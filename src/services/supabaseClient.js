@@ -420,6 +420,36 @@ export class SupabaseService {
   }
 
   /**
+   * Fetch canonical publication for a project by its project_id from Supabase Postgres
+   */
+  async getPublicationByProjectId(projectId) {
+    if (!projectId) return null;
+    const client = await this.getClient();
+    if (!client) return null;
+
+    console.log(`[SupabaseClient] Querying celebration publication for project ID: "${projectId}"`);
+    const { data, error } = await client
+      .from('published_projects')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      const classified = this.classifyError(error);
+      console.warn('[SupabaseClient] getPublicationByProjectId error:', {
+        projectId,
+        error,
+        classified
+      });
+      return null;
+    }
+
+    return data;
+  }
+
+  /**
    * Save a community wish to Supabase
    */
   async saveWish(wishData) {

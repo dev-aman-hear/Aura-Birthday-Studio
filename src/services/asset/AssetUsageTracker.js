@@ -44,6 +44,42 @@ export class AssetUsageTracker {
         }
       });
 
+      // 4. Check Scene Settings (Timeline Memories, Collages, Items, Hero Photo)
+      if (scene.settings) {
+        if (Array.isArray(scene.settings.memories)) {
+          scene.settings.memories.forEach((m, idx) => {
+            if (m.photoAssetId === assetId) {
+              isUsed = true;
+              matchedElements.push(`Timeline Memory #${idx + 1} (${m.title || m.year || 'Memory'})`);
+            }
+          });
+        }
+        if (Array.isArray(scene.settings.collages)) {
+          scene.settings.collages.forEach((c, idx) => {
+            if (c.photoAssetId === assetId) {
+              isUsed = true;
+              matchedElements.push(`Collage Photo #${idx + 1} (${c.title || 'Photo'})`);
+            }
+          });
+        }
+        if (Array.isArray(scene.settings.items)) {
+          scene.settings.items.forEach((it, idx) => {
+            if (it.photoAssetId === assetId) {
+              isUsed = true;
+              matchedElements.push(`Bonus Memory #${idx + 1} (${it.title || 'Item'})`);
+            }
+          });
+        }
+        if (scene.settings.heroPhotoAssetId === assetId) {
+          isUsed = true;
+          matchedElements.push('Hero Photo');
+        }
+        if (scene.settings.revealPhotoAssetId === assetId) {
+          isUsed = true;
+          matchedElements.push('Reveal Photo');
+        }
+      }
+
       if (isUsed) {
         sceneUsages.push({
           sceneId: scene.id,
@@ -54,6 +90,17 @@ export class AssetUsageTracker {
         });
       }
     });
+
+    // Check Project Settings (Background Music, etc.)
+    if (project.settings?.bgMusicAssetId === assetId) {
+      sceneUsages.push({
+        sceneId: 'project_settings',
+        sceneName: 'Project Background Audio',
+        template: 'settings',
+        slots: ['bg_music'],
+        elements: ['Background Music']
+      });
+    }
 
     return {
       count: sceneUsages.length,
@@ -104,10 +151,50 @@ export class AssetUsageTracker {
         }
       });
 
+      // 4. Update Scene Settings (Timeline Memories, Collages, Items, Hero Photo)
+      if (scene.settings) {
+        if (Array.isArray(scene.settings.memories)) {
+          scene.settings.memories.forEach(m => {
+            if (m.photoAssetId === oldAssetId) {
+              m.photoAssetId = newAssetId;
+              sceneModified = true;
+            }
+          });
+        }
+        if (Array.isArray(scene.settings.collages)) {
+          scene.settings.collages.forEach(c => {
+            if (c.photoAssetId === oldAssetId) {
+              c.photoAssetId = newAssetId;
+              sceneModified = true;
+            }
+          });
+        }
+        if (Array.isArray(scene.settings.items)) {
+          scene.settings.items.forEach(it => {
+            if (it.photoAssetId === oldAssetId) {
+              it.photoAssetId = newAssetId;
+              sceneModified = true;
+            }
+          });
+        }
+        if (scene.settings.heroPhotoAssetId === oldAssetId) {
+          scene.settings.heroPhotoAssetId = newAssetId;
+          sceneModified = true;
+        }
+        if (scene.settings.revealPhotoAssetId === oldAssetId) {
+          scene.settings.revealPhotoAssetId = newAssetId;
+          sceneModified = true;
+        }
+      }
+
       if (sceneModified) {
         modifiedScenesCount++;
       }
     });
+
+    if (project.settings?.bgMusicAssetId === oldAssetId) {
+      project.settings.bgMusicAssetId = newAssetId;
+    }
 
     return modifiedScenesCount;
   }
@@ -152,8 +239,64 @@ export class AssetUsageTracker {
         }
       });
 
+      // Safely detach from Scene Settings (Timeline Memories, Collages, Items, Hero Photo)
+      if (scene.settings) {
+        if (Array.isArray(scene.settings.memories)) {
+          scene.settings.memories.forEach(m => {
+            if (m.photoAssetId === assetId) {
+              m.photoAssetId = null;
+              if (m.photoUrl && (m.photoUrl.startsWith('blob:') || m.photoUrl.startsWith('data:'))) {
+                m.photoUrl = '';
+              }
+              changed = true;
+            }
+          });
+        }
+        if (Array.isArray(scene.settings.collages)) {
+          scene.settings.collages.forEach(c => {
+            if (c.photoAssetId === assetId) {
+              c.photoAssetId = null;
+              if (c.photoUrl && (c.photoUrl.startsWith('blob:') || c.photoUrl.startsWith('data:'))) {
+                c.photoUrl = '';
+              }
+              changed = true;
+            }
+          });
+        }
+        if (Array.isArray(scene.settings.items)) {
+          scene.settings.items.forEach(it => {
+            if (it.photoAssetId === assetId) {
+              it.photoAssetId = null;
+              if (it.photoUrl && (it.photoUrl.startsWith('blob:') || it.photoUrl.startsWith('data:'))) {
+                it.photoUrl = '';
+              }
+              changed = true;
+            }
+          });
+        }
+        if (scene.settings.heroPhotoAssetId === assetId) {
+          scene.settings.heroPhotoAssetId = null;
+          if (scene.settings.heroPhotoUrl && (scene.settings.heroPhotoUrl.startsWith('blob:') || scene.settings.heroPhotoUrl.startsWith('data:'))) {
+            scene.settings.heroPhotoUrl = '';
+          }
+          changed = true;
+        }
+        if (scene.settings.revealPhotoAssetId === assetId) {
+          scene.settings.revealPhotoAssetId = null;
+          if (scene.settings.revealPhotoUrl && (scene.settings.revealPhotoUrl.startsWith('blob:') || scene.settings.revealPhotoUrl.startsWith('data:'))) {
+            scene.settings.revealPhotoUrl = '';
+          }
+          changed = true;
+        }
+      }
+
       if (changed) affectedCount++;
     });
+
+    if (project.settings?.bgMusicAssetId === assetId) {
+      project.settings.bgMusicAssetId = null;
+      project.settings.bgMusicUrl = '';
+    }
 
     return affectedCount;
   }

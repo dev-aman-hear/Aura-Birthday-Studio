@@ -4,6 +4,33 @@
  */
 
 import { resolveTemplateId } from '../templates/TemplateRegistry.js';
+import { SAMPLE_ASSETS } from '../data/SampleData.js';
+
+export function resolveMemoryPhoto(item, project = null) {
+  if (!item) return '';
+
+  // 1. photoAssetId -> resolve from project.assets or SAMPLE_ASSETS
+  if (item.photoAssetId) {
+    if (project?.assets && Array.isArray(project.assets)) {
+      const asset = project.assets.find(a => a.id === item.photoAssetId);
+      if (asset && (asset.renderUrl || asset.url || asset.thumbnail)) {
+        return asset.renderUrl || asset.url || asset.thumbnail;
+      }
+    }
+    const sample = SAMPLE_ASSETS.find(a => a.id === item.photoAssetId);
+    if (sample && (sample.renderUrl || sample.url || sample.thumbnail)) {
+      return sample.renderUrl || sample.url || sample.thumbnail;
+    }
+  }
+
+  // 2. photoUrl -> use external URL
+  if (item.photoUrl && typeof item.photoUrl === 'string' && item.photoUrl.trim() !== '') {
+    return item.photoUrl.trim();
+  }
+
+  // 3. Empty / Placeholder
+  return '';
+}
 
 export class SpecialAnimationEngine {
   constructor() {
@@ -538,15 +565,20 @@ export class SpecialAnimationEngine {
 
         currentIndex = idx;
         const item = memories[idx];
+        const photoSrc = resolveMemoryPhoto(item, project);
         if (captionText) captionText.textContent = item.caption || '';
         if (imgContainer) {
-          imgContainer.innerHTML = `
+          imgContainer.innerHTML = photoSrc ? `
             <div class="media-collage-wrapper" style="width:100%; height:100%; position:relative;">
-              <div class="media-collage-bg" style="background-image:url('${item.photoUrl}');"></div>
-              <img class="media-collage-fg" src="${item.photoUrl}" alt="${item.title}">
+              <div class="media-collage-bg" style="background-image:url('${photoSrc}');"></div>
+              <img class="media-collage-fg" src="${photoSrc}" alt="${item.title || ''}">
+            </div>
+          ` : `
+            <div class="media-collage-wrapper empty-memory-photo" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03);">
+              <span style="font-size:3rem; opacity:0.5;">📷</span>
             </div>
           `;
-          this.playKenBurns(imgContainer.querySelector('.media-collage-fg'), 5.5);
+          if (photoSrc) this.playKenBurns(imgContainer.querySelector('.media-collage-fg'), 5.5);
         }
 
         if (dotsContainer) {
@@ -631,18 +663,23 @@ export class SpecialAnimationEngine {
         if (idx < 0 || idx >= memories.length) return;
         currentIndex = idx;
         const item = memories[idx];
+        const photoSrc = resolveMemoryPhoto(item, project);
         if (yearBadge) yearBadge.textContent = item.year || '2026';
         if (titleEl) titleEl.textContent = item.title || 'MEMORY';
         if (counterEl) counterEl.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(memories.length).padStart(2, '0')}`;
         if (captionText) captionText.textContent = item.caption || '';
         if (mediaContainer) {
-          mediaContainer.innerHTML = `
+          mediaContainer.innerHTML = photoSrc ? `
             <div class="media-collage-wrapper" style="width:100%; height:100%; position:relative;">
-              <div class="media-collage-bg" style="background-image:url('${item.photoUrl}');"></div>
-              <img class="media-collage-fg" src="${item.photoUrl}" alt="${item.title}">
+              <div class="media-collage-bg" style="background-image:url('${photoSrc}');"></div>
+              <img class="media-collage-fg" src="${photoSrc}" alt="${item.title || ''}">
+            </div>
+          ` : `
+            <div class="media-collage-wrapper empty-memory-photo" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03);">
+              <span style="font-size:3rem; opacity:0.5;">🎞️</span>
             </div>
           `;
-          this.playKenBurns(mediaContainer.querySelector('.media-collage-fg'), 6.0);
+          if (photoSrc) this.playKenBurns(mediaContainer.querySelector('.media-collage-fg'), 6.0);
         }
 
         if (nodesContainer) {
@@ -716,12 +753,17 @@ export class SpecialAnimationEngine {
         if (idx < 0 || idx >= collages.length) return;
         currentIndex = idx;
         const item = collages[idx];
+        const photoSrc = resolveMemoryPhoto(item, project);
         if (captionText) captionText.textContent = item.caption || '';
         if (photoContainer) {
-          photoContainer.innerHTML = `
+          photoContainer.innerHTML = photoSrc ? `
             <div class="media-collage-wrapper" style="width:100%; height:100%; position:relative;">
-              <div class="media-collage-bg" style="background-image:url('${item.photoUrl}');"></div>
-              <img class="media-collage-fg" src="${item.photoUrl}" alt="${item.title}">
+              <div class="media-collage-bg" style="background-image:url('${photoSrc}');"></div>
+              <img class="media-collage-fg" src="${photoSrc}" alt="${item.title || ''}">
+            </div>
+          ` : `
+            <div class="media-collage-wrapper empty-memory-photo" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03);">
+              <span style="font-size:3rem; opacity:0.5;">🖼️</span>
             </div>
           `;
         }
@@ -1008,12 +1050,17 @@ export class SpecialAnimationEngine {
         if (idx < 0 || idx >= items.length) return;
         currentIndex = idx;
         const it = items[idx];
+        const photoSrc = resolveMemoryPhoto(it, project);
         if (itemTitle) itemTitle.textContent = it.title || '';
         if (mediaContainer) {
-          mediaContainer.innerHTML = `
+          mediaContainer.innerHTML = photoSrc ? `
             <div class="media-collage-wrapper" style="width:100%; height:100%; position:relative;">
-              <div class="media-collage-bg" style="background-image:url('${it.photoUrl}');"></div>
-              <img class="media-collage-fg" src="${it.photoUrl}" alt="${it.title}">
+              <div class="media-collage-bg" style="background-image:url('${photoSrc}');"></div>
+              <img class="media-collage-fg" src="${photoSrc}" alt="${it.title || ''}">
+            </div>
+          ` : `
+            <div class="media-collage-wrapper empty-memory-photo" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03);">
+              <span style="font-size:3rem; opacity:0.5;">🎁</span>
             </div>
           `;
         }

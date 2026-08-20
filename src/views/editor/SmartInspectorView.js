@@ -10,6 +10,8 @@ import { CountdownService } from '../../services/CountdownService.js';
 import { StyleRegistry } from '../../data/styles/StyleRegistry.js';
 import { SceneAssetsPanel } from './SceneAssetsPanel.js';
 import { getOrCreateTextElements } from '../../templates/TextElementHelper.js';
+import { AssetPickerModal } from '../AssetPickerModal.js';
+import { SAMPLE_ASSETS } from '../../data/SampleData.js';
 
 export class SmartInspectorView {
   constructor(options = {}) {
@@ -23,6 +25,114 @@ export class SmartInspectorView {
     this.onDeleteElement = options.onDeleteElement || (() => {});
     this.onOpenModeration = options.onOpenModeration || (() => {});
     this.onPreviewWishWall = options.onPreviewWishWall || (() => {});
+  }
+
+  resolveMemoryPhotoInfo(item) {
+    if (!item) return { url: '', name: '', detail: '', isAsset: false, isExternal: false };
+
+    // 1. Check if item has photoAssetId
+    if (item.photoAssetId) {
+      const found = (this.allAssets || []).find(a => a.id === item.photoAssetId)
+        || (this.project?.assets || []).find(a => a.id === item.photoAssetId)
+        || SAMPLE_ASSETS.find(a => a.id === item.photoAssetId);
+
+      if (found) {
+        return {
+          url: found.renderUrl || found.thumbnail || found.url || '',
+          name: found.name || 'Selected Asset',
+          detail: (found.metadata?.fileFormat || found.type || 'IMAGE').toUpperCase(),
+          isAsset: true,
+          isExternal: false
+        };
+      }
+    }
+
+    // 2. Check if item has photoUrl (external or fallback)
+    if (item.photoUrl && typeof item.photoUrl === 'string' && item.photoUrl.trim() !== '') {
+      const url = item.photoUrl.trim();
+      let name = 'External Photo';
+      try {
+        const parsed = new URL(url);
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        if (parts.length > 0) name = parts[parts.length - 1];
+        if (name.length > 22) name = name.substring(0, 20) + '...';
+      } catch (e) {
+        name = url.length > 22 ? url.substring(0, 20) + '...' : url;
+      }
+
+      return {
+        url: url,
+        name: name,
+        detail: 'External Link',
+        isAsset: false,
+        isExternal: true
+      };
+    }
+
+    return { url: '', name: '', detail: '', isAsset: false, isExternal: false };
+  }
+
+  renderMemoryPhotoControl(item, idx, fieldType, inputClass) {
+    const photoInfo = this.resolveMemoryPhotoInfo(item);
+    if (photoInfo.url) {
+      return `
+        <div class="form-group" style="margin-top:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+            <label style="font-size:0.68rem; font-weight:700; color:var(--text-muted, #aaa); margin:0;">PHOTO</label>
+            <span style="font-size:0.62rem; font-weight:700; ${photoInfo.isAsset ? 'color:var(--accent-gold, #ffd700);' : 'color:#74b9ff;'}">
+              ${photoInfo.isAsset ? '✨ Asset Library' : '🌐 External URL'}
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:4px 8px; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+              <div style="width:32px; height:32px; border-radius:4px; overflow:hidden; background:#000; flex-shrink:0; border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;">
+                <img src="${photoInfo.url}" alt="${photoInfo.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block';" />
+                <span style="display:none; font-size:0.8rem;">🖼️</span>
+              </div>
+              <div style="min-width:0; flex:1;">
+                <div style="font-size:0.72rem; font-weight:700; color:var(--text, #fff); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${photoInfo.name}">
+                  ${photoInfo.name}
+                </div>
+                <div style="font-size:0.62rem; color:var(--text-muted, #888); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  ${photoInfo.detail}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:4px; flex-shrink:0;">
+              <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-mem-idx="${idx}" data-field="${fieldType}" title="Change Photo from Assets" style="font-size:0.68rem; padding:2px 6px;">
+                🔄 Change
+              </button>
+              <button class="btn btn-ghost btn-xs text-danger btn-spec-clear-photo" data-mem-idx="${idx}" data-field="${fieldType}" title="Clear Photo" style="font-size:0.68rem; padding:2px 5px; color:#ff7675;">
+                ✕
+              </button>
+            </div>
+          </div>
+          <div style="margin-top:3px;">
+            <details style="font-size:0.65rem; color:var(--text-muted, #888);">
+              <summary style="cursor:pointer; user-select:none; color:var(--text-muted, #888); margin-bottom:2px;">External URL (optional)</summary>
+              <input type="text" class="form-input ${inputClass}" data-mem-idx="${idx}" data-field="${fieldType}" value="${photoInfo.isExternal ? (item.photoUrl || '') : ''}" placeholder="https://..." style="font-size:0.68rem; padding:2px 6px; width:100%; margin-top:2px;" />
+            </details>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="form-group" style="margin-top:6px;">
+        <label style="font-size:0.68rem; font-weight:700; color:var(--text-muted, #aaa); margin-bottom:3px; display:block;">PHOTO</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-mem-idx="${idx}" data-field="${fieldType}" style="flex:1; font-size:0.72rem; padding:5px 8px; justify-content:center; display:flex; align-items:center; gap:5px; font-weight:700; background:rgba(127,90,240,0.15); border:1px dashed rgba(127,90,240,0.5); color:var(--accent, #a29bfe);">
+            <span>🖼️ Select from Assets</span>
+          </button>
+        </div>
+        <div style="margin-top:3px;">
+          <details style="font-size:0.65rem; color:var(--text-muted, #888);">
+            <summary style="cursor:pointer; user-select:none; color:var(--text-muted, #888); margin-bottom:2px;">or paste External URL</summary>
+            <input type="text" class="form-input ${inputClass}" data-mem-idx="${idx}" data-field="${fieldType}" value="${item.photoUrl || ''}" placeholder="https://..." style="font-size:0.68rem; padding:2px 6px; width:100%; margin-top:2px;" />
+          </details>
+        </div>
+      </div>
+    `;
   }
 
   setSelectedElementId(id) {
@@ -715,13 +825,7 @@ export class SmartInspectorView {
                   <label style="font-size:0.68rem;">Caption Message</label>
                   <input type="text" class="form-input inp-spec-mem-caption" data-mem-idx="${idx}" value="${m.caption || ''}" placeholder="Caption..." style="font-size:0.72rem; padding:3px 6px;" />
                 </div>
-                <div class="form-group" style="margin-top:4px;">
-                  <label style="font-size:0.68rem;">Photo URL</label>
-                  <div style="display:flex; gap:4px;">
-                    <input type="text" class="form-input inp-spec-mem-photo" data-mem-idx="${idx}" value="${m.photoUrl || ''}" placeholder="https://..." style="font-size:0.72rem; padding:3px 6px;" />
-                    <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-mem-idx="${idx}" data-field="memories" title="Choose Photo" style="font-size:0.7rem; padding:0 6px;">🖼️</button>
-                  </div>
-                </div>
+                ${this.renderMemoryPhotoControl(m, idx, 'memories', 'inp-spec-mem-photo')}
               </div>
             `).join('')}
           </div>
@@ -777,13 +881,7 @@ export class SmartInspectorView {
                   <label style="font-size:0.68rem;">Caption</label>
                   <input type="text" class="form-input inp-spec-seq-caption" data-mem-idx="${idx}" value="${m.caption || ''}" placeholder="Caption..." style="font-size:0.72rem; padding:3px 6px;" />
                 </div>
-                <div class="form-group" style="margin-top:4px;">
-                  <label style="font-size:0.68rem;">Photo URL</label>
-                  <div style="display:flex; gap:4px;">
-                    <input type="text" class="form-input inp-spec-seq-photo" data-mem-idx="${idx}" value="${m.photoUrl || ''}" placeholder="https://..." style="font-size:0.72rem; padding:3px 6px;" />
-                    <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-mem-idx="${idx}" data-field="memseq" title="Choose Photo" style="font-size:0.7rem; padding:0 6px;">🖼️</button>
-                  </div>
-                </div>
+                ${this.renderMemoryPhotoControl(m, idx, 'memseq', 'inp-spec-seq-photo')}
               </div>
             `).join('')}
           </div>
@@ -825,13 +923,7 @@ export class SmartInspectorView {
                   <label style="font-size:0.68rem;">Caption</label>
                   <input type="text" class="form-input inp-spec-col-caption" data-col-idx="${idx}" value="${c.caption || ''}" placeholder="Caption" style="font-size:0.72rem; padding:3px 6px;" />
                 </div>
-                <div class="form-group" style="margin-top:4px;">
-                  <label style="font-size:0.68rem;">Photo URL</label>
-                  <div style="display:flex; gap:4px;">
-                    <input type="text" class="form-input inp-spec-col-photo" data-col-idx="${idx}" value="${c.photoUrl || ''}" placeholder="https://..." style="font-size:0.72rem; padding:3px 6px;" />
-                    <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-mem-idx="${idx}" data-field="collage" title="Choose Photo" style="font-size:0.7rem; padding:0 6px;">🖼️</button>
-                  </div>
-                </div>
+                ${this.renderMemoryPhotoControl(c, idx, 'collage', 'inp-spec-col-photo')}
               </div>
             `).join('')}
           </div>
@@ -1069,13 +1161,7 @@ export class SmartInspectorView {
                   <label style="font-size:0.68rem;">Caption</label>
                   <input type="text" class="form-input inp-spec-bonus-caption" data-item-idx="${idx}" value="${it.caption || ''}" placeholder="Caption..." style="font-size:0.72rem; padding:3px 6px;" />
                 </div>
-                <div class="form-group" style="margin-top:4px;">
-                  <label style="font-size:0.68rem;">Photo URL</label>
-                  <div style="display:flex; gap:4px;">
-                    <input type="text" class="form-input inp-spec-bonus-photo" data-item-idx="${idx}" value="${it.photoUrl || ''}" placeholder="https://..." style="font-size:0.72rem; padding:3px 6px;" />
-                    <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-mem-idx="${idx}" data-field="bonus" title="Choose Photo" style="font-size:0.7rem; padding:0 6px;">🖼️</button>
-                  </div>
-                </div>
+                ${this.renderMemoryPhotoControl(it, idx, 'bonus', 'inp-spec-bonus-photo')}
               </div>
             `).join('')}
           </div>
@@ -1131,13 +1217,7 @@ export class SmartInspectorView {
           <label style="font-size:0.75rem; font-weight:700;">Credits Line 2</label>
           <input type="text" class="form-input" id="inspSpecCredit2" value="${c2}" />
         </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label style="font-size:0.75rem; font-weight:700;">Hero Final Photo URL</label>
-          <div style="display:flex; gap:4px;">
-            <input type="text" class="form-input" id="inspSpecHeroPhoto" value="${s.heroPhotoUrl || ''}" placeholder="https://..." style="font-size:0.75rem;" />
-            <button class="btn btn-secondary btn-xs btn-spec-pick-photo" data-field="herophoto" title="Choose Photo" style="font-size:0.75rem; padding:0 8px;">🖼️</button>
-          </div>
-        </div>
+        ${this.renderMemoryPhotoControl({ photoAssetId: s.heroPhotoAssetId, photoUrl: s.heroPhotoUrl, title: 'Hero Final Photo' }, 0, 'herophoto', 'inp-spec-hero-photo')}
         <div class="form-group" style="margin-top:8px;">
           <label style="font-size:0.75rem; font-weight:700;">Replay Button Text</label>
           <input type="text" class="form-input" id="inspSpecReplayBtn" value="${s.replayButtonText || 'WATCH AGAIN ↺'}" />
@@ -1597,33 +1677,91 @@ export class SmartInspectorView {
         }
       }
 
-      // Photo Picker for special scenes
+      // Photo Picker for special scenes (Timeline Memories, etc.)
       const pickBtn = e.target.closest('.btn-spec-pick-photo');
       if (pickBtn) {
         const field = pickBtn.dataset.field;
-        const idx = parseInt(pickBtn.dataset.memIdx, 10);
-        this.onOpenAssetPicker({
+        const idx = pickBtn.dataset.memIdx !== undefined ? parseInt(pickBtn.dataset.memIdx, 10) : null;
+
+        const modal = new AssetPickerModal({
+          project: this.project,
+          allAssets: this.allAssets,
+          targetScene: this.scene,
+          targetSlotId: null,
+          filterTab: 'image',
           type: 'image',
-          onAssetSelected: (asset) => {
-            if (asset && (asset.renderUrl || asset.url)) {
-              const url = asset.renderUrl || asset.url;
+          onProjectModified: () => {
+            if (this.onProjectModified) this.onProjectModified();
+          },
+          onSelectAsset: (asset) => {
+            if (asset) {
+              const url = asset.renderUrl || asset.thumbnail || asset.url || '';
               if (field === 'memories' && this.scene.settings?.memories?.[idx]) {
+                this.scene.settings.memories[idx].photoAssetId = asset.id;
                 this.scene.settings.memories[idx].photoUrl = url;
               } else if (field === 'memseq' && this.scene.settings?.memories?.[idx]) {
+                this.scene.settings.memories[idx].photoAssetId = asset.id;
                 this.scene.settings.memories[idx].photoUrl = url;
               } else if (field === 'collage' && this.scene.settings?.collages?.[idx]) {
+                this.scene.settings.collages[idx].photoAssetId = asset.id;
                 this.scene.settings.collages[idx].photoUrl = url;
               } else if (field === 'bonus' && this.scene.settings?.items?.[idx]) {
+                this.scene.settings.items[idx].photoAssetId = asset.id;
                 this.scene.settings.items[idx].photoUrl = url;
               } else if (field === 'herophoto') {
+                this.scene.settings.heroPhotoAssetId = asset.id;
                 this.scene.settings.heroPhotoUrl = url;
               }
+
+              // Ensure asset is tracked in scene.assetIds and project.assetIds
+              this.scene.assetIds = this.scene.assetIds || [];
+              if (!this.scene.assetIds.includes(asset.id)) {
+                this.scene.assetIds.push(asset.id);
+              }
+              this.project.assetIds = this.project.assetIds || [];
+              if (!this.project.assetIds.includes(asset.id)) {
+                this.project.assetIds.push(asset.id);
+              }
+
+              if (!this.allAssets.some(a => a.id === asset.id)) {
+                this.allAssets.unshift(asset);
+              }
+
               notifyChange();
               const updated = this.render();
               inspector.replaceWith(updated);
             }
           }
         });
+        document.body.appendChild(modal.render());
+        return;
+      }
+
+      // Photo Clear for special scenes
+      const clearBtn = e.target.closest('.btn-spec-clear-photo');
+      if (clearBtn) {
+        const field = clearBtn.dataset.field;
+        const idx = clearBtn.dataset.memIdx !== undefined ? parseInt(clearBtn.dataset.memIdx, 10) : null;
+        if (field === 'memories' && this.scene.settings?.memories?.[idx]) {
+          this.scene.settings.memories[idx].photoAssetId = null;
+          this.scene.settings.memories[idx].photoUrl = '';
+        } else if (field === 'memseq' && this.scene.settings?.memories?.[idx]) {
+          this.scene.settings.memories[idx].photoAssetId = null;
+          this.scene.settings.memories[idx].photoUrl = '';
+        } else if (field === 'collage' && this.scene.settings?.collages?.[idx]) {
+          this.scene.settings.collages[idx].photoAssetId = null;
+          this.scene.settings.collages[idx].photoUrl = '';
+        } else if (field === 'bonus' && this.scene.settings?.items?.[idx]) {
+          this.scene.settings.items[idx].photoAssetId = null;
+          this.scene.settings.items[idx].photoUrl = '';
+        } else if (field === 'herophoto') {
+          this.scene.settings.heroPhotoAssetId = null;
+          this.scene.settings.heroPhotoUrl = '';
+        }
+        notifyChange();
+        const updated = this.render();
+        inspector.replaceWith(updated);
+        return;
       }
     });
 
@@ -1774,7 +1912,11 @@ export class SmartInspectorView {
         if (e.target.id === 'inspSpecPersonal') { this.scene.settings.personalLine = e.target.value; this.scene.settings.personalMessage = e.target.value; notifyChange(); }
         if (e.target.id === 'inspSpecCredit1') { this.scene.settings.creditLine1 = e.target.value; notifyChange(); }
         if (e.target.id === 'inspSpecCredit2') { this.scene.settings.creditLine2 = e.target.value; notifyChange(); }
-        if (e.target.id === 'inspSpecHeroPhoto') { this.scene.settings.heroPhotoUrl = e.target.value; notifyChange(); }
+        if (e.target.id === 'inspSpecHeroPhoto' || e.target.classList.contains('inp-spec-hero-photo')) {
+          this.scene.settings.heroPhotoUrl = e.target.value;
+          this.scene.settings.heroPhotoAssetId = null;
+          notifyChange();
+        }
         if (e.target.id === 'inspSpecReplayBtn') { this.scene.settings.replayButtonText = e.target.value; notifyChange(); }
 
         // Dynamic item fields
@@ -1792,7 +1934,11 @@ export class SmartInspectorView {
         }
         if (e.target.classList.contains('inp-spec-mem-photo')) {
           const idx = parseInt(e.target.dataset.memIdx, 10);
-          if (this.scene.settings.memories?.[idx]) { this.scene.settings.memories[idx].photoUrl = e.target.value; notifyChange(); }
+          if (this.scene.settings.memories?.[idx]) {
+            this.scene.settings.memories[idx].photoUrl = e.target.value;
+            this.scene.settings.memories[idx].photoAssetId = null;
+            notifyChange();
+          }
         }
 
         if (e.target.classList.contains('inp-spec-seq-year')) {
@@ -1809,7 +1955,11 @@ export class SmartInspectorView {
         }
         if (e.target.classList.contains('inp-spec-seq-photo')) {
           const idx = parseInt(e.target.dataset.memIdx, 10);
-          if (this.scene.settings.memories?.[idx]) { this.scene.settings.memories[idx].photoUrl = e.target.value; notifyChange(); }
+          if (this.scene.settings.memories?.[idx]) {
+            this.scene.settings.memories[idx].photoUrl = e.target.value;
+            this.scene.settings.memories[idx].photoAssetId = null;
+            notifyChange();
+          }
         }
 
         if (e.target.classList.contains('inp-spec-col-title')) {
@@ -1822,7 +1972,11 @@ export class SmartInspectorView {
         }
         if (e.target.classList.contains('inp-spec-col-photo')) {
           const idx = parseInt(e.target.dataset.colIdx, 10);
-          if (this.scene.settings.collages?.[idx]) { this.scene.settings.collages[idx].photoUrl = e.target.value; notifyChange(); }
+          if (this.scene.settings.collages?.[idx]) {
+            this.scene.settings.collages[idx].photoUrl = e.target.value;
+            this.scene.settings.collages[idx].photoAssetId = null;
+            notifyChange();
+          }
         }
 
         if (e.target.classList.contains('inp-spec-card-title')) {
@@ -1844,7 +1998,11 @@ export class SmartInspectorView {
         }
         if (e.target.classList.contains('inp-spec-bonus-photo')) {
           const idx = parseInt(e.target.dataset.itemIdx, 10);
-          if (this.scene.settings.items?.[idx]) { this.scene.settings.items[idx].photoUrl = e.target.value; notifyChange(); }
+          if (this.scene.settings.items?.[idx]) {
+            this.scene.settings.items[idx].photoUrl = e.target.value;
+            this.scene.settings.items[idx].photoAssetId = null;
+            notifyChange();
+          }
         }
         return;
       }
@@ -1965,6 +2123,17 @@ export class SmartInspectorView {
         if (!this.project.countdown) this.project.countdown = {};
         this.project.countdown.styleId = e.target.value;
         notifyChange();
+      }
+
+      if (e.target.classList.contains('inp-spec-mem-photo') ||
+          e.target.classList.contains('inp-spec-seq-photo') ||
+          e.target.classList.contains('inp-spec-col-photo') ||
+          e.target.classList.contains('inp-spec-bonus-photo') ||
+          e.target.classList.contains('inp-spec-hero-photo') ||
+          e.target.id === 'inspSpecHeroPhoto') {
+        const updated = this.render();
+        inspector.replaceWith(updated);
+        return;
       }
 
       if (!activeEl) {

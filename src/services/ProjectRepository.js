@@ -25,6 +25,14 @@ class ProjectRepository {
     return data ? new Project(data) : null;
   }
 
+  async setPublicationInfo(projectId, publicationId, isPublished = true) {
+    const project = await this.getProject(projectId);
+    if (!project) return null;
+    project.publicationId = publicationId;
+    project.published = Boolean(isPublished);
+    return await this.saveProject(project);
+  }
+
   async getAllProjects(creatorId = null) {
     const list = await dbService.getAll('projects');
     const projects = list.map(p => new Project(p));

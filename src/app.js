@@ -360,6 +360,23 @@ export class BirthdayStudioApp {
         this.selectedSceneId = this.project.scenes[0].id;
       }
     }
+
+    // Synchronize canonical publication state from persistent database
+    if (this.project) {
+      try {
+        const canonicalPub = await publishedProjectRepository.getCanonicalPublicationForProject(this.project.id);
+        if (canonicalPub && canonicalPub.id) {
+          if (!this.project.published || this.project.publicationId !== canonicalPub.id) {
+            this.project.published = true;
+            this.project.publicationId = canonicalPub.id;
+            await projectRepository.saveProject(this.project, this.user?.id);
+          }
+          this.latestPublication = canonicalPub;
+        }
+      } catch (e) {
+        console.warn('[App] Canonical publication sync warning:', e);
+      }
+    }
   }
 
   async refreshStateAndRenderEditor() {
@@ -617,19 +634,23 @@ export class BirthdayStudioApp {
   }
 
   showPublishPreflight(isRepublish = false) {
+    const isUpdate = Boolean(this.project?.published || this.project?.publicationId || this.latestPublication);
     const preflight = new PublishPreflightView(
       this.project,
       async () => {
         const confirmView = new PublishConfirmationView(this.project, async (selectedDays = null) => {
           try {
-            Toast.show('Publishing celebration...', 'info');
-            const pub = isRepublish ?
-              await publishedProjectRepository.republishProject(this.project, selectedDays) :
-              await publishedProjectRepository.publishProject(this.project, selectedDays);
+            Toast.show(isUpdate ? 'Updating celebration link...' : 'Publishing celebration...', 'info');
+            const pub = await publishedProjectRepository.publishProject(this.project, selectedDays);
 
-            CreatorActivityService.logActivity('Celebration Published', this.project?.recipient?.name, '🚀');
+            CreatorActivityService.logActivity(
+              isUpdate ? 'Celebration Link Updated' : 'Celebration Published',
+              this.project?.recipient?.name,
+              '🚀'
+            );
+            Toast.show(isUpdate ? 'Link updated successfully!' : 'Celebration published successfully!', 'success');
             await this.refreshStateAndRenderEditor();
-            this.showPublishSuccessCeremony(pub);
+            this.showPublishSuccessCeremony(pub, isUpdate);
           } catch (pubErr) {
             console.error('[App] Publication failed:', pubErr);
             Toast.show(`Publication failed: ${pubErr.message || 'Check connection'}`, 'error');
@@ -641,10 +662,10 @@ export class BirthdayStudioApp {
     document.body.appendChild(preflight.render());
   }
 
-  showPublishSuccessCeremony(pub) {
+  showPublishSuccessCeremony(pub, isUpdate = false) {
     const successView = new PublishSuccessView(pub, () => {
       window.location.hash = '#dashboard';
-    });
+    }, isUpdate);
     document.body.appendChild(successView.render());
   }
 }

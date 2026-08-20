@@ -587,7 +587,9 @@ export class ModernEditorLayout {
         this.updateSmartInspector(activeScene, this.workspaceGrid);
       },
       onSelectAsset: (asset) => {
-        if (el && asset) {
+        if (el && typeof el.onAssetSelected === 'function') {
+          el.onAssetSelected(asset);
+        } else if (el && asset) {
           el.assetId = asset.id;
           el.content = asset.renderUrl || asset.thumbnail || asset.url || asset.id;
           el.url = asset.renderUrl || asset.thumbnail || asset.url;

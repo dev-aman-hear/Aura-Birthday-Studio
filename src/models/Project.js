@@ -51,6 +51,8 @@ export class Project {
       subtitle: data.countdown?.subtitle || 'Counting down to celebration time!',
       ...data.countdown
     };
+    this.published = Boolean(data.published || data.isPublished);
+    this.publicationId = data.publicationId || data.publication_id || null;
     this.createdAt = data.createdAt || Date.now();
     this.updatedAt = data.updatedAt || Date.now();
   }
@@ -75,6 +77,8 @@ export class Project {
       scenes: this.scenes.map(s => (typeof s.toJSON === 'function' ? s.toJSON() : s)),
       wishWall: this.wishWall,
       countdown: this.countdown,
+      published: this.published,
+      publicationId: this.publicationId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

@@ -1137,5 +1137,20 @@ export class DashboardView {
 
 async function dbService_getAllPubs() {
   const list = await dbService.getAll('published_projects');
-  return list.sort((a, b) => b.publishedAt - a.publishedAt);
+  const sorted = list.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+  
+  // Deduplicate by projectId to guarantee 1 canonical link entry per project
+  const projectMap = new Map();
+  for (const pub of sorted) {
+    const pid = pub.projectId || pub.project_id;
+    if (pid) {
+      if (!projectMap.has(pid)) {
+        projectMap.set(pid, pub);
+      }
+    } else {
+      projectMap.set(pub.id, pub);
+    }
+  }
+
+  return Array.from(projectMap.values());
 }

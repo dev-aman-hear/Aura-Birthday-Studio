@@ -17,10 +17,11 @@ export class AssetPickerModal {
     this.allAssets = options.allAssets || [];
     this.targetScene = options.targetScene || null;
     this.targetSlotId = options.targetSlotId || null;
+    this.targetType = options.type || null;
     this.onSelectAsset = options.onSelectAsset || (() => {});
     this.onProjectModified = options.onProjectModified || (() => {});
     this.searchQuery = '';
-    this.filterTab = 'compatible'; // 'compatible', 'all', 'image', 'video', 'audio', 'sticker'
+    this.filterTab = options.filterTab || (options.type === 'image' ? 'image' : 'compatible'); // 'compatible', 'all', 'image', 'video', 'audio', 'sticker'
     this.selectedAsset = null;
   }
 

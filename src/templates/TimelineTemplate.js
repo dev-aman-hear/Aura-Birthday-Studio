@@ -15,6 +15,16 @@ export function renderTimelineTemplate(scene = {}, project = {}, assets = []) {
       renderUrl: p.src || p.renderUrl,
       name: p.caption || p.name || `Chapter ${idx + 1}`
     }));
+  } else if (scene.settings?.memories && Array.isArray(scene.settings.memories) && scene.settings.memories.length > 0) {
+    timelineItems = scene.settings.memories.map((m, idx) => {
+      const asset = m.photoAssetId ? assets.find(a => a.id === m.photoAssetId) : null;
+      const url = asset ? (asset.renderUrl || asset.url || asset.thumbnail) : (m.photoUrl || '');
+      return {
+        id: m.photoAssetId || `timeline-mem-${idx}`,
+        renderUrl: url,
+        name: m.title || m.caption || `Chapter ${idx + 1}`
+      };
+    }).filter(it => Boolean(it.renderUrl));
   } else if (scene.slots?.timeline_photos || scene.slots?.timeline_images) {
     const slotVal = scene.slots.timeline_photos || scene.slots.timeline_images;
     const ids = Array.isArray(slotVal) ? slotVal : [slotVal];

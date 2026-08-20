@@ -34,6 +34,8 @@ export class TopNavView {
       }
     }
 
+    const isPublished = Boolean(this.project?.published || this.project?.publicationId || (this.publication && !this.publication.isExpired()));
+
     nav.innerHTML = `
       <!-- Left: Navigation & Project Context -->
       <div class="nav-left" style="display:flex; align-items:center; gap:12px;">
@@ -60,9 +62,16 @@ export class TopNavView {
           ▶️ Preview
         </button>
 
-        <!-- Publish / Manage Link -->
-        <button class="btn btn-primary btn-sm" id="btnNavPublish" title="Publish or manage celebration link" style="font-weight:800; min-height:34px;">
-          🚀 ${this.publication && !this.publication.isExpired() ? 'Manage Link' : 'Publish'}
+        <!-- Copy Link (If Published) -->
+        ${isPublished ? `
+          <button class="btn btn-secondary btn-sm" id="btnNavCopyLink" title="Copy public celebration link" style="font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+            <span>📋</span> <span class="hide-mobile">Copy Link</span>
+          </button>
+        ` : ''}
+
+        <!-- Publish / Update Link -->
+        <button class="btn btn-primary btn-sm" id="btnNavPublish" title="${isPublished ? 'Update live celebration link with latest changes' : 'Publish celebration'}" style="font-weight:800; min-height:34px;">
+          🚀 ${isPublished ? 'Update Link' : 'Publish'}
         </button>
 
         <!-- More Menu Toggle Container -->
@@ -161,6 +170,16 @@ export class TopNavView {
       if (btn.id === 'btnNavUndo') this.onAction('undo');
       if (btn.id === 'btnNavRedo') this.onAction('redo');
       if (btn.id === 'btnNavPreviewExperience') this.onAction('previewExperience');
+      if (btn.id === 'btnNavCopyLink') {
+        const pubId = this.project?.publicationId || this.publication?.id;
+        if (pubId) {
+          const url = `${window.location.origin}${window.location.pathname}#view/${pubId}`;
+          navigator.clipboard.writeText(url).then(() => {
+            import('../utils/Toast.js').then(m => m.Toast.show('Celebration link copied!', 'success'));
+          });
+        }
+        return;
+      }
       if (btn.id === 'btnNavPublish') this.onAction('publish');
     });
   }

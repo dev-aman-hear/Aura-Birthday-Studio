@@ -42,11 +42,13 @@ export class PublishConfirmationView {
     const totalDuration = (this.project?.scenes || []).reduce((acc, s) => acc + (s.duration || 6), 0);
     const isConfigured = supabaseService.isConfigured();
 
+    const isPublished = Boolean(this.project?.published || this.project?.publicationId);
+
     modal.innerHTML = `
       <div class="wizard-modal" style="max-width:520px; padding:26px; box-sizing:border-box;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
           <h3 style="font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:8px;">
-            <span>🚀</span> <span>Publish Celebration</span>
+            <span>🚀</span> <span>${isPublished ? 'Update Celebration Link' : 'Publish Celebration'}</span>
           </h3>
           <button class="btn btn-ghost btn-icon" id="btnCloseConfirmModal" aria-label="Close Modal">✕</button>
         </div>
@@ -62,7 +64,9 @@ export class PublishConfirmationView {
         `}
 
         <p style="font-size:0.86rem; color:var(--text-muted); margin-bottom:16px;">
-          Review your celebration details and choose how long the public recipient link should remain active.
+          ${isPublished 
+            ? 'Your public celebration link will remain unchanged. Updating will refresh the live celebration with your latest edits and photos.' 
+            : 'Review your celebration details and choose how long the public recipient link should remain active.'}
         </p>
 
         <!-- Project Summary Cards -->
@@ -71,6 +75,11 @@ export class PublishConfirmationView {
           <div>🎉 <strong>Occasion:</strong> ${occasion}</div>
           <div>🎬 <strong>Scenes:</strong> ${sceneCount} scenes (${totalDuration}s total duration)</div>
           <div>📷 <strong>Media Assets:</strong> ${mediaCount} memory files attached</div>
+          ${isPublished && this.project?.publicationId ? `
+            <div style="color:var(--accent-gold, #ffd700); font-size:0.8rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px; margin-top:2px;">
+              🔗 <strong>Existing Link:</strong> #view/${this.project.publicationId}
+            </div>
+          ` : ''}
         </div>
 
         <!-- Duration Selection Dropdown -->
@@ -102,7 +111,7 @@ export class PublishConfirmationView {
         <div style="display:flex; justify-content:flex-end; gap:10px;">
           <button class="btn btn-secondary" id="btnCancelConfirm" style="padding:10px 18px;">Cancel</button>
           <button class="btn btn-primary" id="btnExecutePublish" style="padding:10px 22px; font-weight:800; box-shadow:0 4px 14px rgba(124,58,237,0.4);">
-            🚀 Publish
+            🚀 ${isPublished ? 'Update Link' : 'Publish'}
           </button>
         </div>
       </div>
