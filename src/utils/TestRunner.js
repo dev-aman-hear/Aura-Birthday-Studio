@@ -62,6 +62,7 @@ import { CreatorOnboardingView } from '../views/CreatorOnboardingView.js';
 import { ProjectStatusBadge } from '../views/ProjectStatusBadge.js';
 import { PublishPreflightView } from '../views/PublishPreflightView.js';
 import { PublishConfirmationView } from '../views/PublishConfirmationView.js';
+import { PublishProgressModal } from '../views/PublishProgressModal.js';
 import { SceneTemplatePickerView } from '../views/SceneTemplatePickerView.js';
 import { TopNavView } from '../views/TopNavView.js';
 import { StyleSelectionView } from '../views/StyleSelectionView.js';
@@ -1253,6 +1254,113 @@ export class TestRunner {
       const updatedSnapshotGift = pubGBUpdated.snapshot.scenes.find(s => s.template === 'special_3d_gift_reveal');
       const passGB11 = pubGBUpdated.id === pubGB.id && updatedSnapshotGift.settings.giftBox.title === 'Updated Gift Title' && updatedSnapshotGift.settings.giftBox.contentType === 'video';
       results.push({ test: 'GB-11 — Publishing and updating project preserves permanent link and updates Gift Box content', pass: passGB11, detail: `Publication ID: ${pubGBUpdated.id}, Snapshot title: "${updatedSnapshotGift.settings.giftBox.title}", type: "${updatedSnapshotGift.settings.giftBox.contentType}"` });
+
+      // =========================================================================
+      // BUG-29: Wish Wall Deletion & Persistence Sync Across Views
+      // =========================================================================
+      const projWish = projectRepository.createDefaultProject({ recipientName: 'WishSyncRecipient', occasion: 'birthday' });
+      await projectRepository.saveProject(projWish);
+      const pubWish = await publishedProjectRepository.publishProject(projWish, 7);
+
+      const wishProjRef = { id: projWish.id, publicationId: pubWish.id, occasion: 'birthday', wishWall: { requireApproval: false } };
+      // Allow slight time offset for anti-spam
+      await new Promise(r => setTimeout(r, 50));
+      const w1 = await wishRepository.createWish({ name: 'Alice', message: 'Happy Birthday Alice!' }, wishProjRef);
+      await new Promise(r => setTimeout(r, 50));
+      // Bypass cooldown for testing
+      wishRepository.lastSubmissionTime = 0;
+      const w2 = await wishRepository.createWish({ name: 'Bob', message: 'Have a wonderful day Bob!' }, wishProjRef);
+
+      const initialApproved = await wishRepository.getApprovedWishes(projWish.id);
+      const passInitialApproved = initialApproved.length === 2;
+
+      // Delete wish 1
+      await wishRepository.deleteWish(w1.id, projWish.id);
+      const postDelete1 = await wishRepository.getApprovedWishes(projWish.id);
+      const deletedW1 = await wishRepository.getWish(w1.id);
+      const remainingW2 = await wishRepository.getWish(w2.id);
+
+      const passDelete1 = postDelete1.length === 1 && postDelete1[0].id === w2.id && deletedW1 === null && remainingW2 !== null;
+
+      // Check WishWallView rendering
+      const wishWallV = new WishWallView(pubWish.id);
+      const wallElem = await wishWallV.render();
+      const passWallRender = wallElem && !wallElem.innerHTML.includes('Happy Birthday Alice!') && wallElem.innerHTML.includes('Have a wonderful day Bob!');
+
+      // Delete wish 2 (test all deleted / empty remote fallback)
+      await wishRepository.deleteWish(w2.id, projWish.id);
+      const postDelete2 = await wishRepository.getApprovedWishes(projWish.id);
+      const passDelete2 = postDelete2.length === 0;
+
+      const wallElemEmpty = await wishWallV.render();
+      const passWallEmpty = wallElemEmpty && wallElemEmpty.innerHTML.includes('No wishes posted yet');
+
+      const passBUG29 = passInitialApproved && passDelete1 && passWallRender && passDelete2 && passWallEmpty;
+      results.push({
+        test: 'BUG-29 (Wish Wall Deletion, Selective Removal & Published Sync)',
+        pass: passBUG29,
+        detail: `Init count: ${initialApproved.length}, After del 1: ${postDelete1.length}, After del 2: ${postDelete2.length}, Published URL intact: ${pubWish.id}`
+      });
+
+      // =========================================================================
+      // PP1: Real-Time Publishing Progress Tracking & Asset Upload Integration
+      // =========================================================================
+      const progressEvents = [];
+      const projProgress = projectRepository.createDefaultProject({
+        recipientName: 'ProgressTester',
+        occasion: 'birthday'
+      });
+      await projectRepository.saveProject(projProgress);
+
+      const pubWithProgress = await publishedProjectRepository.publishProject(
+        projProgress,
+        7,
+        (evt) => {
+          progressEvents.push({ ...evt });
+        }
+      );
+
+      const hasPreparing = progressEvents.some(e => e.phase === 'preparing');
+      const hasAssets = progressEvents.some(e => e.phase === 'assets');
+      const hasSaving = progressEvents.some(e => e.phase === 'saving');
+      const hasGenerating = progressEvents.some(e => e.phase === 'generating');
+      const hasPublished = progressEvents.some(e => e.phase === 'published' && e.percent === 100);
+
+      // Verify progress modal instantiation and rendering
+      const progressModalInstance = new PublishProgressModal({
+        project: projProgress,
+        durationDays: 7,
+        isUpdate: true
+      });
+      const renderedModalElem = progressModalInstance.render();
+      const hasProgressBar = Boolean(renderedModalElem.querySelector('#publishProgressBarFill'));
+      const hasPhasesList = Boolean(renderedModalElem.querySelector('#publishPhasesList'));
+
+      // Test zero-asset project publishing
+      const zeroAssetEvents = [];
+      const zeroAssetProj = projectRepository.createBlankCanvasProject({ recipientName: 'ZeroAsset' });
+      zeroAssetProj.assetIds = [];
+      await projectRepository.saveProject(zeroAssetProj);
+
+      const zeroPub = await publishedProjectRepository.publishProject(
+        zeroAssetProj,
+        'permanent',
+        (evt) => {
+          zeroAssetEvents.push({ ...evt });
+        }
+      );
+      const zeroAssetHandled = zeroAssetEvents.some(e => e.phase === 'assets' && e.totalAssets === 0);
+
+      const passPP1 = Boolean(pubWithProgress && pubWithProgress.id) &&
+        hasPreparing && hasAssets && hasSaving && hasGenerating && hasPublished &&
+        hasProgressBar && hasPhasesList &&
+        Boolean(zeroPub && zeroPub.id) && zeroAssetHandled;
+
+      results.push({
+        test: 'PP1 (Real-Time Publishing Progress Tracking, Phases & Asset Monitor)',
+        pass: passPP1,
+        detail: `Events captured: ${progressEvents.length}, Phases: [preparing, assets, saving, generating, published], Modal DOM verified: ${hasProgressBar && hasPhasesList}`
+      });
 
     } catch (globalErr) {
       console.error('Test Runner Error:', globalErr);

@@ -30,6 +30,7 @@ import { SceneTemplatePickerView } from './views/SceneTemplatePickerView.js';
 import { ModernEditorLayout } from './views/editor/ModernEditorLayout.js';
 import { PublishPreflightView } from './views/PublishPreflightView.js';
 import { PublishConfirmationView } from './views/PublishConfirmationView.js';
+import { PublishProgressModal } from './views/PublishProgressModal.js';
 import { VersionHistoryModal } from './views/VersionHistoryModal.js';
 import { PublishSuccessView } from './views/PublishSuccessView.js';
 import { WishWallView } from './views/WishWallView.js';
@@ -637,29 +638,37 @@ export class BirthdayStudioApp {
     const isUpdate = Boolean(this.project?.published || this.project?.publicationId || this.latestPublication);
     const preflight = new PublishPreflightView(
       this.project,
-      async () => {
-        const confirmView = new PublishConfirmationView(this.project, async (selectedDays = null) => {
-          try {
-            Toast.show(isUpdate ? 'Updating celebration link...' : 'Publishing celebration...', 'info');
-            const pub = await publishedProjectRepository.publishProject(this.project, selectedDays);
-
-            CreatorActivityService.logActivity(
-              isUpdate ? 'Celebration Link Updated' : 'Celebration Published',
-              this.project?.recipient?.name,
-              '🚀'
-            );
-            Toast.show(isUpdate ? 'Link updated successfully!' : 'Celebration published successfully!', 'success');
-            await this.refreshStateAndRenderEditor();
-            this.showPublishSuccessCeremony(pub, isUpdate);
-          } catch (pubErr) {
-            console.error('[App] Publication failed:', pubErr);
-            Toast.show(`Publication failed: ${pubErr.message || 'Check connection'}`, 'error');
-          }
+      () => {
+        const confirmView = new PublishConfirmationView(this.project, (selectedDays = null) => {
+          this.executePublishProgressFlow(selectedDays, isUpdate);
         });
         document.body.appendChild(confirmView.render());
       }
     );
     document.body.appendChild(preflight.render());
+  }
+
+  executePublishProgressFlow(selectedDays = null, isUpdate = false) {
+    const progressModal = new PublishProgressModal({
+      project: this.project,
+      durationDays: selectedDays,
+      isUpdate,
+      onComplete: async (pub) => {
+        CreatorActivityService.logActivity(
+          isUpdate ? 'Celebration Link Updated' : 'Celebration Published',
+          this.project?.recipient?.name,
+          '🚀'
+        );
+        await this.refreshStateAndRenderEditor();
+      },
+      onReturnDashboard: () => {
+        window.location.hash = '#dashboard';
+      },
+      onClose: async () => {
+        await this.refreshStateAndRenderEditor();
+      }
+    });
+    document.body.appendChild(progressModal.render());
   }
 
   showPublishSuccessCeremony(pub, isUpdate = false) {

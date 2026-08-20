@@ -10,6 +10,7 @@ import { ConfettiEngine } from '../utils/Confetti.js';
 import { WishSubmissionModal } from './WishSubmissionModal.js';
 import { Accessibility } from '../utils/Accessibility.js';
 import { specialAnimationEngine } from '../animations/SpecialAnimationEngine.js';
+import { wishRepository } from '../services/WishRepository.js';
 
 export class CelebrationPreviewView {
   constructor(options = {}, onContinueEditArg = null, onPublishArg = null) {
@@ -50,9 +51,16 @@ export class CelebrationPreviewView {
     this.bgAudio = null;
     this.keyupHandler = null;
     this._isReplaying = false;
+    this.wishes = [];
   }
 
   async render() {
+    try {
+      this.wishes = await wishRepository.getApprovedWishes(this.project?.id);
+    } catch (e) {
+      this.wishes = [];
+    }
+
     const overlay = document.createElement('div');
     overlay.className = 'draft-preview-overlay animate-fade';
     overlay.id = 'draftPreviewRoot';
@@ -179,7 +187,8 @@ export class CelebrationPreviewView {
     // Render using UniversalSceneRenderer with the exact active style, background, elements, and positions
     const sceneHtml = UniversalSceneRenderer.renderScene(currentScene, this.project, sceneAssets, {
       isPreview: true,
-      viewMode: this.previewViewMode
+      viewMode: this.previewViewMode,
+      wishes: this.wishes
     });
 
     // Wrap in standard Canvas Viewport Frame matching the exact scale, aspect ratio, and centering of StoryCanvasView
@@ -239,7 +248,10 @@ export class CelebrationPreviewView {
         }
         const subModal = new WishSubmissionModal(
           this.project,
-          () => {
+          async (newWish) => {
+            try {
+              this.wishes = await wishRepository.getApprovedWishes(this.project?.id);
+            } catch (e) {}
             this.renderCurrentScene(overlay);
           },
           () => {
@@ -353,7 +365,28 @@ export class CelebrationPreviewView {
   }
 
   attachEvents(overlay) {
+    const handleWishSync = async (detail) => {
+      if (!detail || !this.project?.id) return;
+      if (detail.projectId && detail.projectId !== this.project.id) return;
+
+      if (detail.action === 'delete' && detail.wishId) {
+        this.wishes = this.wishes.filter(w => w.id !== detail.wishId);
+      } else {
+        this.wishes = await wishRepository.getApprovedWishes(this.project.id);
+      }
+      const cur = this.scenes[this.currentSceneIdx];
+      if (cur && (cur.template === 'wish_wall' || cur.template === 'wish-wall')) {
+        this.renderCurrentScene(overlay);
+      }
+    };
+
+    const onWishSync = (e) => handleWishSync(e.detail);
+    window.addEventListener('wish-wall-updated', onWishSync);
+    window.addEventListener('wish-deleted', onWishSync);
+
     const closePreview = () => {
+      window.removeEventListener('wish-wall-updated', onWishSync);
+      window.removeEventListener('wish-deleted', onWishSync);
       if (this.timer) clearTimeout(this.timer);
       if (this.bgAudio) {
         this.bgAudio.pause();

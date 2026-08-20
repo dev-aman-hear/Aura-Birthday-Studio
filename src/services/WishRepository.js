@@ -16,6 +16,30 @@ class WishRepository {
   }
 
   /**
+   * Broadcast real-time wish updates across tabs, windows, and active views
+   */
+  broadcastWishSync(detail) {
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('wish-wall-updated', { detail }));
+        window.dispatchEvent(new CustomEvent('wish-deleted', { detail }));
+      } catch (e) {}
+
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          const bc = new BroadcastChannel('birthday_studio_wishes_channel');
+          bc.postMessage(detail);
+          bc.close();
+        } catch (e) {}
+      }
+
+      try {
+        localStorage.setItem('birthday_studio_wish_sync', JSON.stringify({ ...detail, _ts: Date.now() }));
+      } catch (e) {}
+    }
+  }
+
+  /**
    * Create a new wish with publication status check, occasion safety & anti-spam validation
    */
   async createWish(wishData, project) {
@@ -109,26 +133,33 @@ class WishRepository {
     // 2. Local cache
     await dbService.put('wishes', wish.toJSON());
     this.lastSubmissionTime = Date.now();
+
+    // 3. Broadcast real-time creation event
+    this.broadcastWishSync({
+      action: 'create',
+      projectId: project.id,
+      wishId: wish.id,
+      wish: wish.toJSON()
+    });
+
     return wish;
   }
 
   async getWish(wishId) {
+    if (!wishId) return null;
     const data = await dbService.get('wishes', wishId);
     return data ? new Wish(data) : null;
   }
 
   async getProjectWishes(projectId) {
-    const list = await dbService.getByIndex('wishes', 'projectId', projectId);
-    return list.map(w => new Wish(w)).sort((a, b) => b.createdAt - a.createdAt);
-  }
+    if (!projectId) return [];
 
-  async getApprovedWishes(projectId) {
     // 1. Fetch from Supabase if configured
     if (supabaseService.isConfigured()) {
       try {
-        const remoteList = await supabaseService.getApprovedWishes(projectId);
-        if (Array.isArray(remoteList) && remoteList.length > 0) {
-          return remoteList.map(w => new Wish({
+        const remoteList = await supabaseService.getAllWishesForProject(projectId);
+        if (Array.isArray(remoteList)) {
+          const remoteWishes = remoteList.map(w => new Wish({
             id: w.id,
             projectId: w.project_id || w.projectId,
             occasion: w.occasion,
@@ -138,11 +169,79 @@ class WishRepository {
             messageSource: w.message_source || w.messageSource,
             presetMessageId: w.preset_message_id || w.presetMessageId,
             status: w.status,
-            createdAt: w.created_at || w.createdAt
-          }));
+            createdAt: w.created_at ? (typeof w.created_at === 'string' ? new Date(w.created_at).getTime() : w.created_at) : Date.now()
+          })).sort((a, b) => b.createdAt - a.createdAt);
+
+          // Synchronize local IndexedDB cache with remote project wishes
+          try {
+            const localWishes = await dbService.getByIndex('wishes', 'projectId', projectId);
+            const remoteIds = new Set(remoteWishes.map(w => w.id));
+            for (const lw of localWishes) {
+              if (!remoteIds.has(lw.id)) {
+                await dbService.delete('wishes', lw.id);
+              }
+            }
+            for (const rw of remoteWishes) {
+              await dbService.put('wishes', rw.toJSON());
+            }
+          } catch (syncErr) {
+            console.warn('[WishRepository] Cache sync warning in getProjectWishes:', syncErr);
+          }
+
+          return remoteWishes;
         }
       } catch (e) {
-        console.warn('[WishRepository] Remote wishes fetch error:', e);
+        console.warn('[WishRepository] Remote getProjectWishes error, falling back to local:', e);
+      }
+    }
+
+    // 2. Local fallback
+    const list = await dbService.getByIndex('wishes', 'projectId', projectId);
+    return list.map(w => new Wish(w)).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  async getApprovedWishes(projectId) {
+    if (!projectId) return [];
+
+    // 1. Fetch from Supabase if configured
+    if (supabaseService.isConfigured()) {
+      try {
+        const remoteList = await supabaseService.getApprovedWishes(projectId);
+        if (Array.isArray(remoteList)) {
+          const remoteWishes = remoteList.map(w => new Wish({
+            id: w.id,
+            projectId: w.project_id || w.projectId,
+            occasion: w.occasion,
+            name: w.name,
+            isAnonymous: w.is_anonymous !== undefined ? w.is_anonymous : w.isAnonymous,
+            message: w.message,
+            messageSource: w.message_source || w.messageSource,
+            presetMessageId: w.preset_message_id || w.presetMessageId,
+            status: w.status,
+            createdAt: w.created_at ? (typeof w.created_at === 'string' ? new Date(w.created_at).getTime() : w.created_at) : Date.now()
+          })).sort((a, b) => b.createdAt - a.createdAt);
+
+          // Synchronize local IndexedDB cache with authoritative remote approved wishes for this project
+          try {
+            const localWishes = await dbService.getByIndex('wishes', 'projectId', projectId);
+            const remoteIds = new Set(remoteWishes.map(w => w.id));
+            for (const lw of localWishes) {
+              if (lw.status === 'approved' && !remoteIds.has(lw.id)) {
+                // Was deleted remotely, remove from local cache
+                await dbService.delete('wishes', lw.id);
+              }
+            }
+            for (const rw of remoteWishes) {
+              await dbService.put('wishes', rw.toJSON());
+            }
+          } catch (syncErr) {
+            console.warn('[WishRepository] Cache sync warning in getApprovedWishes:', syncErr);
+          }
+
+          return remoteWishes;
+        }
+      } catch (e) {
+        console.warn('[WishRepository] Remote wishes fetch error, falling back to local:', e);
       }
     }
 
@@ -166,6 +265,12 @@ class WishRepository {
       } catch (e) {}
     }
     await dbService.put('wishes', wish.toJSON());
+    this.broadcastWishSync({
+      action: 'approve',
+      projectId: wish.projectId,
+      wishId: wish.id,
+      wish: wish.toJSON()
+    });
     return wish;
   }
 
@@ -179,11 +284,65 @@ class WishRepository {
       } catch (e) {}
     }
     await dbService.put('wishes', wish.toJSON());
+    this.broadcastWishSync({
+      action: 'reject',
+      projectId: wish.projectId,
+      wishId: wish.id,
+      wish: wish.toJSON()
+    });
     return wish;
   }
 
-  async deleteWish(wishId) {
-    await dbService.delete('wishes', wishId);
+  /**
+   * Permanently delete a wish from remote Supabase, local IndexedDB, and active published snapshots
+   */
+  async deleteWish(wishId, projectId = null) {
+    if (!wishId) return false;
+
+    // 1. Get wish record to capture projectId if not passed
+    let targetProjectId = projectId;
+    try {
+      const existing = await this.getWish(wishId);
+      if (existing?.projectId) {
+        targetProjectId = existing.projectId;
+      }
+    } catch (e) {}
+
+    // 2. Delete from remote Supabase if configured
+    if (supabaseService.isConfigured()) {
+      try {
+        await supabaseService.deleteWish(wishId);
+      } catch (e) {
+        console.warn('[WishRepository] Remote wish delete error:', e);
+      }
+    }
+
+    // 3. Delete from local IndexedDB
+    try {
+      await dbService.delete('wishes', wishId);
+    } catch (e) {
+      console.warn('[WishRepository] Local wish delete error:', e);
+    }
+
+    // 4. If project has an active canonical publication, sync the publication snapshot
+    if (targetProjectId) {
+      try {
+        const canonicalPub = await publishedProjectRepository.getCanonicalPublicationForProject(targetProjectId);
+        if (canonicalPub && canonicalPub.snapshot) {
+          await publishedProjectRepository.syncPublicationSnapshot(targetProjectId, canonicalPub.snapshot);
+        }
+      } catch (pubSyncErr) {
+        console.warn('[WishRepository] Publication sync after wish delete warning:', pubSyncErr);
+      }
+    }
+
+    // 5. Broadcast real-time deletion update across windows/tabs/components
+    this.broadcastWishSync({
+      action: 'delete',
+      projectId: targetProjectId,
+      wishId: wishId
+    });
+
     return true;
   }
 

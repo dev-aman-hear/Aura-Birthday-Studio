@@ -5,6 +5,7 @@
  */
 
 import { wishRepository } from '../services/WishRepository.js';
+import { publishedProjectRepository } from '../services/PublishedProjectRepository.js';
 import { WishWallPreviewModal } from './WishWallPreviewModal.js';
 import { Toast } from '../utils/Toast.js';
 
@@ -435,8 +436,15 @@ export class WishModerationView {
       // Delete Single Wish
       const btnDel = e.target.closest('.btn-mod-delete');
       if (btnDel && btnDel.dataset.wishId) {
-        await wishRepository.deleteWish(btnDel.dataset.wishId);
-        Toast.show('Wish deleted', 'info');
+        const wishId = btnDel.dataset.wishId;
+        await wishRepository.deleteWish(wishId, this.project?.id);
+        this.wishes = this.wishes.filter(w => w.id !== wishId);
+        if (this.project?.id) {
+          try {
+            await publishedProjectRepository.syncPublicationSnapshot(this.project.id, this.project);
+          } catch (e) {}
+        }
+        Toast.show('Wish permanently deleted', 'info');
         if (typeof this.onProjectUpdated === 'function') this.onProjectUpdated(this.project);
         await rerender();
         return;

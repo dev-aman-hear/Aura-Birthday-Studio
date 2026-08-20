@@ -8,6 +8,7 @@ import { assetRepository } from '../services/AssetRepository.js';
 import { ConfettiEngine } from '../utils/Confetti.js';
 import { WishSubmissionModal } from './WishSubmissionModal.js';
 import { specialAnimationEngine } from '../animations/SpecialAnimationEngine.js';
+import { wishRepository } from '../services/WishRepository.js';
 
 export class PreviewPlayerView {
   constructor(project, initialSceneId = null) {
@@ -21,9 +22,16 @@ export class PreviewPlayerView {
     this.currentSceneDurationMs = 0;
     this.remainingSceneDurationMs = 0;
     this.isPausedForModal = false;
+    this.wishes = [];
   }
 
   async render() {
+    try {
+      this.wishes = await wishRepository.getApprovedWishes(this.project?.id);
+    } catch (e) {
+      this.wishes = [];
+    }
+
     const modal = document.createElement('div');
     modal.className = 'preview-player-overlay';
     modal.id = 'previewPlayerOverlay';
@@ -105,7 +113,18 @@ export class PreviewPlayerView {
         }
       }
 
-      const sceneHtml = TemplateRegistry.renderScene(currentScene, this.project, assetList, { isPreview: true });
+      let liveWishes = this.wishes;
+      if (currentScene.template === 'wish_wall' || currentScene.template === 'wish-wall') {
+        try {
+          liveWishes = await wishRepository.getApprovedWishes(this.project?.id);
+          this.wishes = liveWishes;
+        } catch (e) {}
+      }
+
+      const sceneHtml = TemplateRegistry.renderScene(currentScene, this.project, assetList, {
+        isPreview: true,
+        wishes: liveWishes
+      });
       stage.innerHTML = `
         <div class="canvas-viewport-frame ratio-widescreen" style="width:100%; height:100%; max-width:100%; max-height:100%; border-radius:12px; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center;">
           <div class="story-canvas-viewport" style="width:100%; height:100%; position:relative; overflow:hidden;">
@@ -157,7 +176,10 @@ export class PreviewPlayerView {
         this.pauseForModal();
         const subModal = new WishSubmissionModal(
           this.project,
-          () => {
+          async (newWish) => {
+            try {
+              this.wishes = await wishRepository.getApprovedWishes(this.project?.id);
+            } catch (e) {}
             this.renderCurrentScene(modal);
           },
           () => {
@@ -234,6 +256,25 @@ export class PreviewPlayerView {
   }
 
   attachEvents(modal) {
+    const handleWishSync = async (detail) => {
+      if (!detail || !this.project?.id) return;
+      if (detail.projectId && detail.projectId !== this.project.id) return;
+
+      if (detail.action === 'delete' && detail.wishId) {
+        this.wishes = this.wishes.filter(w => w.id !== detail.wishId);
+      } else {
+        this.wishes = await wishRepository.getApprovedWishes(this.project.id);
+      }
+      const cur = this.scenes[this.currentIndex];
+      if (cur && (cur.template === 'wish_wall' || cur.template === 'wish-wall')) {
+        this.renderCurrentScene(modal);
+      }
+    };
+
+    this._onWishSync = (e) => handleWishSync(e.detail);
+    window.addEventListener('wish-wall-updated', this._onWishSync);
+    window.addEventListener('wish-deleted', this._onWishSync);
+
     modal.querySelector('#btnClosePlayer')?.addEventListener('click', () => {
       this.close(modal);
     });
@@ -295,6 +336,11 @@ export class PreviewPlayerView {
   }
 
   close(modal) {
+    if (this._onWishSync) {
+      window.removeEventListener('wish-wall-updated', this._onWishSync);
+      window.removeEventListener('wish-deleted', this._onWishSync);
+      this._onWishSync = null;
+    }
     if (this.timer) clearTimeout(this.timer);
     if (this.bgAudio) {
       try {

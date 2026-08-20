@@ -621,6 +621,45 @@ export class RecipientPlayerView {
       }
     }, { passive: true });
 
+    // Real-time Wish Wall Sync Handler
+    const targetProjId = this.project?.id || this.publication?.projectId;
+    const handleWishSync = async (detail) => {
+      if (!detail || !targetProjId) return;
+      if (detail.projectId && detail.projectId !== targetProjId) return;
+
+      if (detail.action === 'delete' && detail.wishId) {
+        this.wishes = this.wishes.filter(w => w.id !== detail.wishId);
+      } else {
+        this.wishes = await wishRepository.getApprovedWishes(targetProjId);
+      }
+
+      const currentScene = this.scenes[this.currentSceneIndex];
+      if (currentScene && (currentScene.template === 'wish_wall' || currentScene.template === 'wish-wall')) {
+        const standaloneRoot = document.getElementById('recipientStandaloneRoot');
+        if (standaloneRoot) {
+          this.renderSceneContent(standaloneRoot, currentScene);
+        }
+      }
+    };
+
+    window.addEventListener('wish-wall-updated', (e) => handleWishSync(e.detail));
+    window.addEventListener('wish-deleted', (e) => handleWishSync(e.detail));
+
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('birthday_studio_wishes_channel');
+        bc.onmessage = (e) => handleWishSync(e.data);
+      } catch (e) {}
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'birthday_studio_wish_sync' && e.newValue) {
+        try {
+          handleWishSync(JSON.parse(e.newValue));
+        } catch (err) {}
+      }
+    });
+
     // 3. Click Actions (In-scene buttons, Floating Nav, Audio Toggle, Fullscreen)
     root.addEventListener('click', (e) => {
       // If modal is open, prevent scene navigation

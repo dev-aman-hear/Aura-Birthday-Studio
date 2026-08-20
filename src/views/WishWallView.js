@@ -1,14 +1,10 @@
-/**
- * Birthday Studio - Dedicated Wish Wall View (Section 4 & Requirement 11)
- * TEST H Metadata-First Security Gated Wish Wall Cards & Submission Modal
- */
-
 import { publishedProjectRepository } from '../services/PublishedProjectRepository.js';
 import { wishRepository } from '../services/WishRepository.js';
 import { ExpiredProjectView } from './ExpiredProjectView.js';
 import { RecipientErrorView } from './RecipientErrorView.js';
 import { CelebrationUnavailableView } from './CelebrationUnavailableView.js';
 import { WishSubmissionModal } from './WishSubmissionModal.js';
+import { escapeHTML } from '../utils/Security.js';
 
 export class WishWallView {
   constructor(publicationId) {
@@ -16,6 +12,87 @@ export class WishWallView {
     this.publicationMeta = null;
     this.publication = null;
     this.wishes = [];
+    this.cleanupListeners = [];
+  }
+
+  formatTimeAgo(ts) {
+    if (!ts) return 'Recently';
+    const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  renderCardsHTML(recipName) {
+    if (!this.wishes || this.wishes.length === 0) {
+      return `
+        <div class="wish-empty-state" style="grid-column:1/-1;">
+          <div class="wish-empty-icon">💌</div>
+          <h4 style="color:var(--text-main); font-weight:700; margin-bottom:6px;">No wishes posted yet!</h4>
+          <p style="font-size:0.85rem; max-width:340px; margin:0 auto 16px auto;">Be the very first one to send a warm celebration wish to ${escapeHTML(recipName)}.</p>
+        </div>
+      `;
+    }
+
+    return this.wishes.map(w => {
+      const displayName = w.isAnonymous ? 'Anonymous' : (w.name || 'Friend');
+      const initial = w.isAnonymous ? '❤️' : (displayName.charAt(0).toUpperCase() || 'F');
+      const timeAgo = this.formatTimeAgo(w.createdAt);
+      const isPinned = Boolean(w.isPinned);
+
+      return `
+        <div class="wish-card-item ${isPinned ? 'is-pinned' : ''}" data-wish-id="${escapeHTML(w.id)}">
+          ${isPinned ? `<span class="pinned-badge-chip">📌 Featured Wish</span>` : ''}
+          <div class="wish-card-header">
+            <div class="wish-avatar">${escapeHTML(initial)}</div>
+            <div class="wish-header-meta">
+              <div class="wish-author-row">
+                <span class="wish-author">${escapeHTML(displayName)}</span>
+                ${w.relationship ? `<span class="wish-tag-badge">${escapeHTML(w.relationship)}</span>` : ''}
+              </div>
+              <span class="wish-time-badge">${timeAgo}</span>
+            </div>
+          </div>
+
+          <div class="wish-card-body">
+            <div class="wish-message-body">${escapeHTML(w.message || '')}</div>
+          </div>
+
+          <div class="wish-reactions-bar">
+            <button class="wish-reaction-pill" data-emoji="❤️" title="Love this">
+              <span>❤️</span>
+              <span class="reaction-count">1</span>
+            </button>
+            <button class="wish-reaction-pill" data-emoji="🎉" title="Celebrate">
+              <span>🎉</span>
+              <span class="reaction-count">1</span>
+            </button>
+            <button class="wish-reaction-pill" data-emoji="✨" title="Sparkle">
+              <span>✨</span>
+              <span class="reaction-count">1</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  updateCardsAndCounter(root, recipName) {
+    if (!root) return;
+    const grid = root.querySelector('#wishCardsGrid');
+    const badge = root.querySelector('#wishCounterBadge');
+    const count = this.wishes.length;
+
+    if (grid) {
+      grid.innerHTML = this.renderCardsHTML(recipName);
+    }
+    if (badge) {
+      badge.innerHTML = `
+        <span class="counter-pulse-dot"></span>
+        <span>${count === 0 ? 'Be the first to leave a wish' : `${count} ${count === 1 ? 'wish' : 'wishes'} sent with love ❤️`}</span>
+      `;
+    }
   }
 
   async render() {
@@ -75,7 +152,6 @@ export class WishWallView {
 
     this.wishes = await wishRepository.getApprovedWishes(this.publication.projectId);
 
-
     const root = document.createElement('div');
     root.className = 'wish-wall-scene-container theme-wall-glassmorphic animate-fade';
     root.id = 'wishWallRoot';
@@ -83,16 +159,6 @@ export class WishWallView {
     const recipName = this.publication.snapshot?.recipient?.name || 'Someone Special';
     const occasion = this.publication.snapshot?.occasion || 'birthday';
     const count = this.wishes.length;
-
-    // Helper for relative time
-    const formatTimeAgo = (ts) => {
-      if (!ts) return 'Recently';
-      const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-      if (diff < 60) return 'Just now';
-      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-      return `${Math.floor(diff / 86400)}d ago`;
-    };
 
     root.innerHTML = `
       <div class="wish-wall-ambience-layer">
@@ -103,7 +169,7 @@ export class WishWallView {
 
       <div class="wish-wall-scene-header">
         <div class="wish-wall-icon">💌</div>
-        <h2 class="wish-wall-title">🌟 Wish Wall for ${recipName}</h2>
+        <h2 class="wish-wall-title">🌟 Wish Wall for ${escapeHTML(recipName)}</h2>
         <p class="wish-wall-subtitle">
           Leave your warm thoughts, memories and congratulations below.
         </p>
@@ -115,61 +181,54 @@ export class WishWallView {
       </div>
 
       <div class="wish-cards-container wish-cards-grid" id="wishCardsGrid" style="max-width:980px; padding:0 12px; margin-bottom:28px;">
-        ${this.wishes.length > 0 ? this.wishes.map(w => {
-          const initial = w.isAnonymous ? '❤️' : (w.name ? w.name.charAt(0).toUpperCase() : 'F');
-          const timeAgo = formatTimeAgo(w.createdAt);
-          const isPinned = w.isPinned || false;
-
-          return `
-            <div class="wish-card-item ${isPinned ? 'is-pinned' : ''}" data-wish-id="${w.id}">
-              ${isPinned ? `<span class="pinned-badge-chip">📌 Featured Wish</span>` : ''}
-              <div class="wish-card-header">
-                <div class="wish-avatar">${initial}</div>
-                <div class="wish-header-meta">
-                  <div class="wish-author-row">
-                    <span class="wish-author">${w.isAnonymous ? 'Anonymous' : (w.name || 'Friend')}</span>
-                    ${w.relationship ? `<span class="wish-tag-badge">${w.relationship}</span>` : ''}
-                  </div>
-                  <span class="wish-time-badge">${timeAgo}</span>
-                </div>
-              </div>
-
-              <div class="wish-card-body">
-                <div class="wish-message-body">${w.message}</div>
-              </div>
-
-              <div class="wish-reactions-bar">
-                <button class="wish-reaction-pill" data-emoji="❤️" title="Love this">
-                  <span>❤️</span>
-                  <span class="reaction-count">1</span>
-                </button>
-                <button class="wish-reaction-pill" data-emoji="🎉" title="Celebrate">
-                  <span>🎉</span>
-                  <span class="reaction-count">1</span>
-                </button>
-                <button class="wish-reaction-pill" data-emoji="✨" title="Sparkle">
-                  <span>✨</span>
-                  <span class="reaction-count">1</span>
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('') : `
-          <div class="wish-empty-state" style="grid-column:1/-1;">
-            <div class="wish-empty-icon">💌</div>
-            <h4 style="color:var(--text-main); font-weight:700; margin-bottom:6px;">No wishes posted yet!</h4>
-            <p style="font-size:0.85rem; max-width:340px; margin:0 auto 16px auto;">Be the very first one to send a warm celebration wish to ${recipName}.</p>
-          </div>
-        `}
+        ${this.renderCardsHTML(recipName)}
       </div>
 
       <div class="wish-wall-action-bar">
         <button class="leave-wish-trigger-btn" id="btnOpenWishModalRoot">
           <span>💌</span>
-          <span>Leave a Wish for ${recipName}</span>
+          <span>Leave a Wish for ${escapeHTML(recipName)}</span>
         </button>
       </div>
     `;
+
+    // Setup live real-time sync handlers
+    const handleSync = async (detail) => {
+      if (!detail || !this.publication?.projectId) return;
+      if (detail.projectId && detail.projectId !== this.publication.projectId) return;
+
+      if (detail.action === 'delete' && detail.wishId) {
+        // Fast path: filter out immediately
+        this.wishes = this.wishes.filter(w => w.id !== detail.wishId);
+        this.updateCardsAndCounter(root, recipName);
+      } else {
+        // Re-fetch authoritative list
+        this.wishes = await wishRepository.getApprovedWishes(this.publication.projectId);
+        this.updateCardsAndCounter(root, recipName);
+      }
+    };
+
+    const onCustomSync = (e) => handleSync(e.detail);
+    window.addEventListener('wish-wall-updated', onCustomSync);
+    window.addEventListener('wish-deleted', onCustomSync);
+
+    let bc = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        bc = new BroadcastChannel('birthday_studio_wishes_channel');
+        bc.onmessage = (e) => handleSync(e.data);
+      } catch (e) {}
+    }
+
+    const onStorage = (e) => {
+      if (e.key === 'birthday_studio_wish_sync' && e.newValue) {
+        try {
+          const detail = JSON.parse(e.newValue);
+          handleSync(detail);
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', onStorage);
 
     root.addEventListener('click', (e) => {
       // Reaction click
@@ -194,9 +253,9 @@ export class WishWallView {
           occasion: occasion,
           wishWall: this.publication.snapshot.publicWishWallSettings || this.publication.snapshot.wishWall
         };
-        const subModal = new WishSubmissionModal(mockProject, async () => {
-          const newRoot = await this.render();
-          root.replaceWith(newRoot);
+        const subModal = new WishSubmissionModal(mockProject, async (newWish) => {
+          this.wishes = await wishRepository.getApprovedWishes(this.publication.projectId);
+          this.updateCardsAndCounter(root, recipName);
         });
         document.body.appendChild(subModal.render());
       }

@@ -152,6 +152,11 @@ export class PublishConfirmationView {
       }
 
       if (e.target.closest('#btnExecutePublish')) {
+        const btn = modal.querySelector('#btnExecutePublish');
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = `<span>⏳</span> <span>Starting...</span>`;
+        }
         const days = this.selectedDays;
         modal.remove();
         this.onConfirmPublish(days);

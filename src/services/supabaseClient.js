@@ -514,6 +514,82 @@ export class SupabaseService {
   }
 
   /**
+   * Fetch all wishes (pending, approved, rejected) for a project from Supabase
+   */
+  async getAllWishesForProject(projectId) {
+    const client = await this.getClient();
+    if (!client) return [];
+
+    try {
+      const { data, error } = await client
+        .from('wishes')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[SupabaseClient] getAllWishesForProject error:', error);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.warn('[SupabaseClient] getAllWishesForProject exception:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a specific wish by ID from Supabase
+   */
+  async deleteWish(wishId) {
+    if (!wishId) return false;
+    const client = await this.getClient();
+    if (!client) return false;
+
+    try {
+      const { error } = await client
+        .from('wishes')
+        .delete()
+        .eq('id', wishId);
+
+      if (error) {
+        console.warn('[SupabaseClient] deleteWish error:', error);
+        return false;
+      }
+      console.log(`[SupabaseClient] Wish ${wishId} successfully deleted from remote database.`);
+      return true;
+    } catch (e) {
+      console.warn('[SupabaseClient] deleteWish exception:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Delete all wishes for a project from Supabase
+   */
+  async deleteWishesByProjectId(projectId) {
+    if (!projectId) return false;
+    const client = await this.getClient();
+    if (!client) return false;
+
+    try {
+      const { error } = await client
+        .from('wishes')
+        .delete()
+        .eq('project_id', projectId);
+
+      if (error) {
+        console.warn('[SupabaseClient] deleteWishesByProjectId error:', error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.warn('[SupabaseClient] deleteWishesByProjectId exception:', e);
+      return false;
+    }
+  }
+
+  /**
    * Live test connection against Supabase instance and verify published_projects table
    */
   async testConnection(customUrl, customKey) {

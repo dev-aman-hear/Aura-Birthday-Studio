@@ -41,6 +41,10 @@ export class WishWallPreviewModal {
         this.liveWishes = [];
       }
     }
+    const hasExplicitSampleWishes = this.scene.settings?.includeSampleWishes === true || this.project.wishWall?.includeSampleWishes === true;
+    if (this.liveWishes.length > 0 && !hasExplicitSampleWishes) {
+      this.sampleVolume = 'live';
+    }
   }
 
   getResolvedWishes() {
@@ -340,9 +344,10 @@ export class WishWallPreviewModal {
       // 3. "Leave a Wish" Button in Preview (Simulates guest submission live!)
       const btnLeaveWish = e.target.closest('#btnOpenLeaveWishModal');
       if (btnLeaveWish) {
-        const subModal = new WishSubmissionModal(this.project, (newWish) => {
+        const subModal = new WishSubmissionModal(this.project, async (newWish) => {
           if (newWish) {
-            this.testWishes.unshift(newWish);
+            await this.loadLiveWishes();
+            this.sampleVolume = 'live';
             this.renderStageContent(overlay);
             Toast.show('💌 Test wish posted to preview wall!', 'success');
           }
@@ -358,8 +363,28 @@ export class WishWallPreviewModal {
       this.renderStageContent(overlay);
     };
 
+    // Real-time Wish Sync Handler
+    const handleWishSync = async (detail) => {
+      if (!detail || !this.project?.id) return;
+      if (detail.projectId && detail.projectId !== this.project.id) return;
+
+      if (detail.action === 'delete' && detail.wishId) {
+        this.liveWishes = this.liveWishes.filter(w => w.id !== detail.wishId);
+        this.testWishes = this.testWishes.filter(w => w.id !== detail.wishId);
+      } else {
+        this.liveWishes = await wishRepository.getApprovedWishes(this.project.id);
+      }
+      rerenderStage();
+    };
+
+    const onWishSync = (e) => handleWishSync(e.detail);
+    window.addEventListener('wish-wall-updated', onWishSync);
+    window.addEventListener('wish-deleted', onWishSync);
+
     // Close Actions
     const closePreview = () => {
+      window.removeEventListener('wish-wall-updated', onWishSync);
+      window.removeEventListener('wish-deleted', onWishSync);
       overlay.remove();
       if (typeof this.onClose === 'function') this.onClose();
     };

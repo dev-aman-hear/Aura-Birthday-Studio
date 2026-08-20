@@ -59,7 +59,15 @@ export class PublishedProjectRepository {
    * Ensures ONE permanent publication ID per project. If already published, updates the existing publication in-place.
    * Uploads required local assets to Supabase Storage and records snapshot in Supabase Postgres
    */
-  static async publishProject(project, durationDays = DEFAULT_LINK_DURATION_DAYS) {
+  /**
+   * Publish a project creator draft into an immutable snapshot payload
+   * Ensures ONE permanent publication ID per project. If already published, updates the existing publication in-place.
+   * Uploads required local assets to Supabase Storage and records snapshot in Supabase Postgres
+   * @param {Object} project - The project model or draft to publish
+   * @param {number|string|null} durationDays - Expiration duration in days or 'permanent' / null
+   * @param {Function} [onProgress] - Optional progress callback ({ phase, percent, message, currentAsset, totalAssets, detail, isUpdate })
+   */
+  static async publishProject(project, durationDays = DEFAULT_LINK_DURATION_DAYS, onProgress = null) {
     if (!project) throw new Error('Cannot publish null project');
 
     // Concurrency / race condition protection
@@ -70,6 +78,28 @@ export class PublishedProjectRepository {
 
     const publishPromise = (async () => {
       try {
+        // Safe progress helper
+        const notifyProgress = (data) => {
+          if (typeof onProgress === 'function') {
+            try {
+              onProgress(data);
+            } catch (err) {
+              console.warn('[PublishedProjectRepository] onProgress callback error:', err);
+            }
+          }
+        };
+
+        // =========================================================================
+        // Phase 1: Preparing (0–10%)
+        // =========================================================================
+        notifyProgress({
+          phase: 'preparing',
+          percent: 5,
+          message: 'Validating celebration data...',
+          detail: 'Checking scenes, elements, and configurations',
+          isUpdate: false
+        });
+
         const validDays = this.validateDurationDays(durationDays);
         const now = Date.now();
 
@@ -100,10 +130,28 @@ export class PublishedProjectRepository {
           console.log(`[PublishedProjectRepository] Creating initial publication ${pubId} for project ${project.id}`);
         }
 
+        notifyProgress({
+          phase: 'preparing',
+          percent: 10,
+          message: isUpdate ? 'Preparing publication update...' : 'Preparing publication payload...',
+          detail: `Publication ID: ${pubId}`,
+          isUpdate
+        });
+
         // Create immutable snapshot copy of creator project
         const snapshotData = JSON.parse(JSON.stringify(project));
 
-        // Bundle and upload relevant project assets to Supabase Storage
+        // =========================================================================
+        // Phase 2: Processing Assets (10–70%)
+        // =========================================================================
+        notifyProgress({
+          phase: 'assets',
+          percent: 12,
+          message: 'Detecting media assets...',
+          detail: 'Scanning scenes for photos, music, and videos',
+          isUpdate
+        });
+
         try {
           const allAssets = await assetRepository.getAllAssets();
           const relevantAssetIds = new Set(project.assetIds || []);
@@ -157,11 +205,37 @@ export class PublishedProjectRepository {
             relevantAssetIds.add(project.settings.bgMusicAssetId);
           }
 
+          const matchedAssets = allAssets.filter(a => relevantAssetIds.has(a.id));
+          const totalAssets = matchedAssets.length;
           const snapshotAssets = [];
           const assetUrlMap = new Map();
 
-          for (const asset of allAssets) {
-            if (relevantAssetIds.has(asset.id)) {
+          if (totalAssets === 0) {
+            notifyProgress({
+              phase: 'assets',
+              percent: 70,
+              currentAsset: 0,
+              totalAssets: 0,
+              message: 'No media assets to upload',
+              detail: 'Continuing to save celebration',
+              isUpdate
+            });
+          } else {
+            let processedCount = 0;
+            for (const asset of matchedAssets) {
+              processedCount++;
+              const currentPercent = Math.round(10 + ((processedCount - 1) / totalAssets) * 60);
+
+              notifyProgress({
+                phase: 'assets',
+                percent: currentPercent,
+                currentAsset: processedCount,
+                totalAssets,
+                message: `Processing assets: ${processedCount} of ${totalAssets}`,
+                detail: asset.name || `Asset ${processedCount}`,
+                isUpdate
+              });
+
               const clonedAsset = JSON.parse(JSON.stringify(asset));
 
               // Check if media is stored locally (blob in IndexedDB or temporary blob URL)
@@ -191,6 +265,17 @@ export class PublishedProjectRepository {
               }
 
               snapshotAssets.push(clonedAsset);
+
+              const finishedPercent = Math.round(10 + (processedCount / totalAssets) * 60);
+              notifyProgress({
+                phase: 'assets',
+                percent: finishedPercent,
+                currentAsset: processedCount,
+                totalAssets,
+                message: `Processed ${processedCount} of ${totalAssets} assets`,
+                detail: asset.name || `Asset ${processedCount}`,
+                isUpdate
+              });
             }
           }
 
@@ -250,6 +335,17 @@ export class PublishedProjectRepository {
           console.warn('[PublishedProjectRepository] Snapshot asset bundling warning:', e);
         }
 
+        // =========================================================================
+        // Phase 3: Saving Publication (70–90%)
+        // =========================================================================
+        notifyProgress({
+          phase: 'saving',
+          percent: 75,
+          message: isUpdate ? 'Updating publication database...' : 'Saving publication database...',
+          detail: 'Writing authoritative snapshot to cloud storage',
+          isUpdate
+        });
+
         const publication = new Publication({
           id: pubId,
           projectId: project.id,
@@ -294,6 +390,25 @@ export class PublishedProjectRepository {
           console.warn('[PublishedProjectRepository] Local cache save warning:', dbErr);
         }
 
+        notifyProgress({
+          phase: 'saving',
+          percent: 90,
+          message: 'Saved publication data successfully',
+          detail: 'Snapshot cached locally and synced to cloud',
+          isUpdate
+        });
+
+        // =========================================================================
+        // Phase 4: Generating Share Link (90–98%)
+        // =========================================================================
+        notifyProgress({
+          phase: 'generating',
+          percent: 92,
+          message: 'Linking celebration...',
+          detail: 'Updating project publication state',
+          isUpdate
+        });
+
         // 3. Persistently update project model with canonical publicationId & published state
         project.publicationId = pubId;
         project.published = true;
@@ -307,6 +422,26 @@ export class PublishedProjectRepository {
         try {
           await this.consolidateDuplicatePublications(project.id, pubId);
         } catch (cErr) {}
+
+        notifyProgress({
+          phase: 'generating',
+          percent: 98,
+          message: 'Finalizing share link and QR code...',
+          detail: `Ready: #view/${pubId}`,
+          isUpdate
+        });
+
+        // =========================================================================
+        // Phase 5: Published (100%)
+        // =========================================================================
+        notifyProgress({
+          phase: 'published',
+          percent: 100,
+          message: isUpdate ? 'Celebration link updated!' : 'Published successfully!',
+          detail: `Your celebration is ready to share`,
+          publication,
+          isUpdate
+        });
 
         return publication;
       } finally {
@@ -516,8 +651,8 @@ export class PublishedProjectRepository {
   /**
    * Republish an expired or existing project creation draft (Updates duration/content on single permanent publication)
    */
-  static async republishProject(project, durationDays = DEFAULT_LINK_DURATION_DAYS) {
-    return await this.publishProject(project, durationDays);
+  static async republishProject(project, durationDays = DEFAULT_LINK_DURATION_DAYS, onProgress = null) {
+    return await this.publishProject(project, durationDays, onProgress);
   }
 
   /**
@@ -610,7 +745,11 @@ export class PublishedProjectRepository {
           id: pub.id,
           project_id: projectId,
           project_data: pub.snapshot,
-          updated_at: new Date().toISOString()
+          created_at: pub.publishedAt ? new Date(pub.publishedAt).toISOString() : new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          expires_at: pub.expiresAt ? new Date(pub.expiresAt).toISOString() : null,
+          is_public: pub.isPublic !== false,
+          version: (pub.version || 1) + 1
         });
       } catch (err) {
         console.warn('[PublishedProjectRepository] Remote syncPublicationSnapshot error:', err);

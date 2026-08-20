@@ -2,6 +2,7 @@ import { TemplateRegistry } from '../templates/TemplateRegistry.js';
 import { assetRepository } from '../services/AssetRepository.js';
 import { SelectionManager } from '../services/SelectionManager.js';
 import { specialAnimationEngine } from '../animations/SpecialAnimationEngine.js';
+import { wishRepository } from '../services/WishRepository.js';
 
 export class StoryCanvasView {
   constructor(options = {}) {
@@ -29,7 +30,16 @@ export class StoryCanvasView {
       }
     }
 
-    const sceneContent = TemplateRegistry.renderTemplate(this.scene, assignedAssets, this.project);
+    let liveWishes = [];
+    if (this.scene.template === 'wish_wall' || this.scene.template === 'wish-wall') {
+      try {
+        liveWishes = await wishRepository.getApprovedWishes(this.project?.id);
+      } catch (e) {}
+    }
+
+    const sceneContent = TemplateRegistry.renderTemplate(this.scene, assignedAssets, this.project, {
+      wishes: liveWishes
+    });
     const viewport = document.getElementById('canvasViewportBody');
     if (viewport) {
       if (typeof sceneContent === 'string') {
@@ -90,7 +100,16 @@ export class StoryCanvasView {
       }
     }
 
-    const sceneContent = TemplateRegistry.renderTemplate(this.scene, assignedAssets, this.project);
+    let liveWishes = [];
+    if (this.scene.template === 'wish_wall' || this.scene.template === 'wish-wall') {
+      try {
+        liveWishes = await wishRepository.getApprovedWishes(this.project?.id);
+      } catch (e) {}
+    }
+
+    const sceneContent = TemplateRegistry.renderTemplate(this.scene, assignedAssets, this.project, {
+      wishes: liveWishes
+    });
 
     const headerHtml = this.hideHeader ? '' : `
       <div class="story-canvas-header" style="padding:10px 16px; background:var(--surface-elevated); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
