@@ -17,14 +17,26 @@ async function getCreateClient() {
     return createClientFn;
   }
 
+  // CDN 1: jsdelivr ESM
   try {
     const module = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    createClientFn = module.createClient;
-    return createClientFn;
-  } catch (err) {
-    console.warn('[SupabaseClient] Failed to load Supabase module from ESM CDN:', err);
-    return null;
-  }
+    if (module && module.createClient) {
+      createClientFn = module.createClient;
+      return createClientFn;
+    }
+  } catch (err) {}
+
+  // CDN 2: esm.sh
+  try {
+    const module2 = await import('https://esm.sh/@supabase/supabase-js@2');
+    if (module2 && module2.createClient) {
+      createClientFn = module2.createClient;
+      return createClientFn;
+    }
+  } catch (err) {}
+
+  console.warn('[SupabaseClient] Failed to load Supabase module from ESM CDN endpoints.');
+  return null;
 }
 
 export class SupabaseService {
@@ -456,6 +468,75 @@ export class SupabaseService {
       console.warn('[SupabaseClient] getApprovedWishes exception:', e);
       return [];
     }
+  }
+
+  /**
+   * Live test connection against Supabase instance and verify published_projects table
+   */
+  async testConnection(customUrl, customKey) {
+    const url = customUrl || this.getSupabaseUrl();
+    const key = customKey || this.getSupabaseAnonKey();
+
+    if (!url || !key) {
+      return {
+        success: false,
+        message: 'Supabase URL and Public Anon Key are required.'
+      };
+    }
+
+    const createClient = await getCreateClient();
+    if (!createClient) {
+      return {
+        success: false,
+        message: 'Unable to load Supabase SDK from CDN or window.'
+      };
+    }
+
+    try {
+      const testClient = createClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+      const { data, error } = await testClient
+        .from('published_projects')
+        .select('id')
+        .limit(1);
+
+      if (error) {
+        if (error.code === '42P01') {
+          return {
+            success: false,
+            message: 'Connected to Supabase, but "published_projects" table is missing. Run the schema in supabase/schema.sql in your Supabase SQL Editor.'
+          };
+        }
+        return {
+          success: false,
+          message: `Database query error: ${error.message || 'Check RLS permissions'}`
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Connected successfully to Supabase! Remote persistence is active.'
+      };
+    } catch (e) {
+      return {
+        success: false,
+        message: `Connection failed: ${e.message}`
+      };
+    }
+  }
+
+  /**
+   * Set and persist Supabase credentials at runtime
+   */
+  setCredentials(url, key) {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (url !== undefined) window.localStorage.setItem('VITE_SUPABASE_URL', url.trim());
+      if (key !== undefined) window.localStorage.setItem('VITE_SUPABASE_ANON_KEY', key.trim());
+    }
+    APP_CONFIG.SUPABASE_URL = url !== undefined ? url.trim() : (APP_CONFIG.SUPABASE_URL || '');
+    APP_CONFIG.SUPABASE_ANON_KEY = key !== undefined ? key.trim() : (APP_CONFIG.SUPABASE_ANON_KEY || '');
+    this.resetClient();
   }
 }
 

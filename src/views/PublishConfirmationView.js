@@ -5,6 +5,7 @@
 
 import { Accessibility } from '../utils/Accessibility.js';
 import { MAX_LINK_DURATION_DAYS, DEFAULT_LINK_DURATION_DAYS } from '../services/PublishedProjectRepository.js';
+import { supabaseService } from '../services/supabaseClient.js';
 
 export class PublishConfirmationView {
   constructor(project, onConfirmPublish = (() => {})) {
@@ -38,7 +39,7 @@ export class PublishConfirmationView {
     const occasion = (this.project?.occasion || 'birthday').toUpperCase();
     const sceneCount = this.project?.scenes?.length || 0;
     const mediaCount = this.project?.assetIds?.length || 0;
-    const totalDuration = (this.project?.scenes || []).reduce((acc, s) => acc + (s.duration || 6), 0);
+    const isConfigured = supabaseService.isConfigured();
 
     modal.innerHTML = `
       <div class="wizard-modal" style="max-width:520px; padding:26px; box-sizing:border-box;">
@@ -48,6 +49,16 @@ export class PublishConfirmationView {
           </h3>
           <button class="btn btn-ghost btn-icon" id="btnCloseConfirmModal" aria-label="Close Modal">✕</button>
         </div>
+
+        ${!isConfigured ? `
+          <div style="background:rgba(230,57,70,0.15); border:1px solid #e63946; padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:0.82rem; color:#ff7675; line-height:1.4;">
+            ⚠️ <strong>Cloud Storage Not Connected</strong>: Supabase URL and Anon Key are not yet configured. The link will only work on this browser. To generate global links for other phones and devices, configure Supabase in Creator Settings.
+          </div>
+        ` : `
+          <div style="background:rgba(44,182,125,0.12); border:1px solid #2cb67d; padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:0.82rem; color:#2cb67d; line-height:1.4;">
+            🟢 <strong>Cloud Storage Connected</strong>: Your celebration will be saved to Supabase and accessible on any device, phone, or browser.
+          </div>
+        `}
 
         <p style="font-size:0.86rem; color:var(--text-muted); margin-bottom:16px;">
           Review your celebration details and choose how long the public recipient link should remain active.

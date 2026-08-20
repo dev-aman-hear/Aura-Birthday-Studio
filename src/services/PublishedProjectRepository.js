@@ -259,6 +259,13 @@ export class PublishedProjectRepository {
     // 2. Fallback to Local IndexedDB when Supabase is not configured (offline / legacy local tests)
     const raw = await dbService.get('published_projects', pubId);
     if (!raw) {
+      if (!supabaseService.isConfigured()) {
+        return {
+          exists: false,
+          error: 'unconfigured',
+          message: 'Cloud database is not connected. Public celebration links require Supabase credentials to be accessed from other browsers and devices. Configure Supabase URL and Anon Key in Creator Studio Settings.'
+        };
+      }
       return { exists: false, status: 'not_found' };
     }
 
