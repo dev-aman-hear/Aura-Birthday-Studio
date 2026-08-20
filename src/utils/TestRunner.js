@@ -86,7 +86,6 @@ import { AssetMetadataExtractor } from '../services/asset/AssetMetadataExtractor
 import { SceneAssetDefinitionService, SCENE_ASSET_DEFINITIONS } from '../services/asset/SceneAssetDefinitions.js';
 import { AssetCompatibilityValidator } from '../services/asset/AssetCompatibilityValidator.js';
 import { SlotManager } from '../services/asset/SlotManager.js';
-import { AssetUsageTracker } from '../services/asset/AssetUsageTracker.js';
 import { StyleRegistry } from '../data/styles/StyleRegistry.js';
 import { UniversalSceneRenderer } from '../templates/UniversalSceneRenderer.js';
 
