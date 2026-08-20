@@ -45,16 +45,31 @@ export class RecipientPlayerView {
   }
 
   async render() {
+    // Basic URL/ID validation
+    if (!this.publicationId || typeof this.publicationId !== 'string' || !this.publicationId.trim()) {
+      const errView = new RecipientErrorView('Invalid celebration link.');
+      return errView.render();
+    }
+
     // STEP 1: Metadata Pre-Flight Check
     try {
       this.publicationMeta = await publishedProjectRepository.getPublicationMetadata(this.publicationId);
     } catch (err) {
       console.error('[RecipientPlayer] Error fetching metadata:', err);
-      const unavailView = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection.');
+      const unavailView = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection and try again.');
       return unavailView.render();
     }
 
     // STEP 2: Differentiated Error & Security Gating
+    if (this.publicationMeta && this.publicationMeta.error) {
+      if (this.publicationMeta.error === 'permission') {
+        const unavailView = new CelebrationUnavailableView('Unable to access celebration due to database security policies. Please verify Supabase configuration.');
+        return unavailView.render();
+      }
+      const unavailView = new CelebrationUnavailableView(this.publicationMeta.message || 'Unable to load celebration. Please check your connection and try again.');
+      return unavailView.render();
+    }
+
     if (!this.publicationMeta || this.publicationMeta.exists === false || this.publicationMeta.status === 'not_found') {
       const errView = new RecipientErrorView('Celebration not found. The link may be incorrect, incomplete, or deleted.');
       return errView.render();
@@ -76,7 +91,7 @@ export class RecipientPlayerView {
       this.publication = await publishedProjectRepository.getPublishedSnapshot(this.publicationId);
     } catch (err) {
       console.error('[RecipientPlayer] Error loading snapshot:', err);
-      const unavailView = new CelebrationUnavailableView('Unable to load celebration data. Please check your internet connection.');
+      const unavailView = new CelebrationUnavailableView('Unable to load celebration data. Please check your internet connection and try again.');
       return unavailView.render();
     }
 
@@ -84,7 +99,6 @@ export class RecipientPlayerView {
       const errView = new RecipientErrorView('Celebration data is incomplete or unavailable.');
       return errView.render();
     }
-
 
     this.project = this.publication.snapshot;
     this.scenes = [...(this.project.scenes || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -102,22 +116,30 @@ export class RecipientPlayerView {
     }
 
     // STEP 4: Resolve Assets & Wishes
-    const rawAssets = this.project.assets || (await assetRepository.getAllAssets()) || [];
+    // Prioritize snapshot assets embedded in publication
+    const rawAssets = (this.project.assets && this.project.assets.length > 0)
+      ? this.project.assets
+      : ((typeof assetRepository !== 'undefined' && assetRepository.getAllAssets) ? (await assetRepository.getAllAssets()) : []);
     this.allAssets = Array.isArray(rawAssets) ? rawAssets : [];
     
     // Resolve render URLs for all assets
     for (const a of this.allAssets) {
-      if (a && !a.renderUrl) {
-        try {
-          a.renderUrl = await assetRepository.getRenderableUrl(a);
-        } catch (e) {
-          console.warn('Asset render url resolution failed:', e);
+      if (a) {
+        if (!a.renderUrl && a.url) {
+          a.renderUrl = a.url;
+        }
+        if (!a.renderUrl && typeof assetRepository !== 'undefined' && assetRepository.getRenderableUrl) {
+          try {
+            a.renderUrl = await assetRepository.getRenderableUrl(a);
+          } catch (e) {
+            console.warn('Asset render url resolution warning:', e);
+          }
         }
       }
     }
 
     try {
-      this.wishes = await wishRepository.getApprovedWishes(this.project.id);
+      this.wishes = await wishRepository.getApprovedWishes(this.project.id || this.publication.projectId);
     } catch (e) {
       this.wishes = [];
     }

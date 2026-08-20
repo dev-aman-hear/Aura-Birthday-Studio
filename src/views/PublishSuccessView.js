@@ -22,6 +22,7 @@ export class PublishSuccessView {
 
     if (!this.publication) return modal;
 
+    const recipName = this.publication?.snapshot?.recipient?.name || 'Someone Special';
     const shareUrl = ShareService.getShareUrl(this.publication.id);
     const qrSvgHtml = ShareService.generateQrSvg(shareUrl);
     const isPermanent = !this.publication.expiresAt;
@@ -103,3 +104,4 @@ export class PublishSuccessView {
     return modal;
   }
 }
+

@@ -19,15 +19,31 @@ export class WishWallView {
   }
 
   async render() {
+    // Basic URL/ID validation
+    if (!this.publicationId || typeof this.publicationId !== 'string' || !this.publicationId.trim()) {
+      const errView = new RecipientErrorView('Invalid celebration link.');
+      return errView.render();
+    }
+
     // STEP 1: Fetch metadata ONLY
     try {
       this.publicationMeta = await publishedProjectRepository.getPublicationMetadata(this.publicationId);
     } catch (err) {
-      const unavailView = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection.');
+      console.error('[WishWallView] Error fetching metadata:', err);
+      const unavailView = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection and try again.');
       return unavailView.render();
     }
 
     // STEP 2: Differentiated error checks
+    if (this.publicationMeta && this.publicationMeta.error) {
+      if (this.publicationMeta.error === 'permission') {
+        const unavailView = new CelebrationUnavailableView('Unable to access celebration due to database security policies. Please verify Supabase configuration.');
+        return unavailView.render();
+      }
+      const unavailView = new CelebrationUnavailableView(this.publicationMeta.message || 'Unable to load celebration. Please check your connection and try again.');
+      return unavailView.render();
+    }
+
     if (!this.publicationMeta || this.publicationMeta.exists === false || this.publicationMeta.status === 'not_found') {
       const errView = new RecipientErrorView('Celebration not found. The link may be incorrect, incomplete, or deleted.');
       return errView.render();
@@ -47,7 +63,8 @@ export class WishWallView {
     try {
       this.publication = await publishedProjectRepository.getPublishedSnapshot(this.publicationId);
     } catch (err) {
-      const unavailView = new CelebrationUnavailableView('Unable to load celebration data. Please check your internet connection.');
+      console.error('[WishWallView] Error loading snapshot:', err);
+      const unavailView = new CelebrationUnavailableView('Unable to load celebration data. Please check your internet connection and try again.');
       return unavailView.render();
     }
 

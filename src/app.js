@@ -138,11 +138,21 @@ export class BirthdayStudioApp {
   }
 
   async route() {
-    const hash = window.location.hash || '#dashboard';
+    const rawHash = window.location.hash || '#dashboard';
+    // Normalize hash: handles #view/..., #/view/..., #wishwall/..., #/wishwall/..., etc.
+    const cleanHash = rawHash.replace(/^#\/?/, '#');
 
-    // 1. PUBLIC RECIPIENT ROUTE (#view/<id>)
-    if (hash.startsWith('#view/')) {
-      const publishedId = hash.replace('#view/', '');
+    // 1. PUBLIC RECIPIENT ROUTE (#view/<id> or #/view/<id>)
+    if (cleanHash.startsWith('#view/')) {
+      const routePart = cleanHash.split('?')[0];
+      const publishedId = routePart.replace(/^#view\//, '').replace(/\/$/, '').trim();
+
+      if (!publishedId) {
+        const errView = new RecipientErrorView('Invalid celebration link.');
+        document.body.innerHTML = '';
+        document.body.appendChild(errView.render());
+        return;
+      }
 
       // Render smooth loading screen first
       const loader = new RecipientLoadingView();
@@ -155,6 +165,7 @@ export class BirthdayStudioApp {
         document.body.innerHTML = '';
         document.body.appendChild(elem);
       } catch (err) {
+        console.error('[App] Viewer rendering error:', err);
         const errView = new RecipientErrorView('An unexpected error occurred while loading this celebration.');
         document.body.innerHTML = '';
         document.body.appendChild(errView.render());
@@ -162,18 +173,38 @@ export class BirthdayStudioApp {
       return;
     }
 
-    // 2. DEDICATED WISH WALL ROUTE (#wishwall/<id>)
-    if (hash.startsWith('#wishwall/')) {
-      const publishedId = hash.replace('#wishwall/', '');
-      const wishWallView = new WishWallView(publishedId);
-      const elem = await wishWallView.render();
+    // 2. DEDICATED WISH WALL ROUTE (#wishwall/<id> or #/wishwall/<id>)
+    if (cleanHash.startsWith('#wishwall/')) {
+      const routePart = cleanHash.split('?')[0];
+      const publishedId = routePart.replace(/^#wishwall\//, '').replace(/\/$/, '').trim();
+
+      if (!publishedId) {
+        const errView = new RecipientErrorView('Invalid celebration link.');
+        document.body.innerHTML = '';
+        document.body.appendChild(errView.render());
+        return;
+      }
+
+      const loader = new RecipientLoadingView('Loading Wish Wall...');
       document.body.innerHTML = '';
-      document.body.appendChild(elem);
+      document.body.appendChild(loader.render());
+
+      try {
+        const wishWallView = new WishWallView(publishedId);
+        const elem = await wishWallView.render();
+        document.body.innerHTML = '';
+        document.body.appendChild(elem);
+      } catch (err) {
+        console.error('[App] WishWall rendering error:', err);
+        const errView = new RecipientErrorView('An unexpected error occurred while loading the wish wall.');
+        document.body.innerHTML = '';
+        document.body.appendChild(errView.render());
+      }
       return;
     }
 
     // 3. AUTOMATED TEST SUITE (#run-tests)
-    if (hash === '#run-tests') {
+    if (cleanHash === '#run-tests') {
       const results = await TestRunner.runAllTests();
       document.body.innerHTML = `
         <div style="padding: 40px; background: #0f0e17; color: #fff; font-family: sans-serif; min-height: 100vh;">
@@ -196,12 +227,12 @@ export class BirthdayStudioApp {
 
     // 4. AUTHENTICATION GATING FOR CREATOR ROUTES
     this.user = await authRepository.getCurrentUser();
-    if (!this.user && hash !== '#login') {
+    if (!this.user && cleanHash !== '#login') {
       window.location.hash = '#login';
       return;
     }
 
-    if (hash === '#login') {
+    if (cleanHash === '#login') {
       if (this.user) {
         window.location.hash = '#dashboard';
         return;
@@ -213,8 +244,8 @@ export class BirthdayStudioApp {
       return;
     }
 
-    if (hash.startsWith('#dashboard')) {
-      const urlParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+    if (cleanHash.startsWith('#dashboard')) {
+      const urlParams = new URLSearchParams(cleanHash.includes('?') ? cleanHash.split('?')[1] : '');
       const activeTab = urlParams.get('tab') || 'my_creations';
 
       const existingDashboard = document.getElementById('dashboardPageRoot');
@@ -565,14 +596,20 @@ export class BirthdayStudioApp {
     const preflight = new PublishPreflightView(
       this.project,
       async () => {
-        const confirmView = new PublishConfirmationView(this.project, async (selectedDays = 3) => {
-          const pub = isRepublish ?
-            await publishedProjectRepository.republishProject(this.project, selectedDays) :
-            await publishedProjectRepository.publishProject(this.project, selectedDays);
+        const confirmView = new PublishConfirmationView(this.project, async (selectedDays = null) => {
+          try {
+            Toast.show('Publishing celebration...', 'info');
+            const pub = isRepublish ?
+              await publishedProjectRepository.republishProject(this.project, selectedDays) :
+              await publishedProjectRepository.publishProject(this.project, selectedDays);
 
-          CreatorActivityService.logActivity('Celebration Published', this.project?.recipient?.name, '🚀');
-          await this.refreshStateAndRenderEditor();
-          this.showPublishSuccessCeremony(pub);
+            CreatorActivityService.logActivity('Celebration Published', this.project?.recipient?.name, '🚀');
+            await this.refreshStateAndRenderEditor();
+            this.showPublishSuccessCeremony(pub);
+          } catch (pubErr) {
+            console.error('[App] Publication failed:', pubErr);
+            Toast.show(`Publication failed: ${pubErr.message || 'Check connection'}`, 'error');
+          }
         });
         document.body.appendChild(confirmView.render());
       }

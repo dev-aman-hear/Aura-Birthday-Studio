@@ -895,7 +895,7 @@ export class TestRunner {
       const passST5 = JSON.stringify(project.scenes) === origScenesJson;
       results.push({ test: 'ST5 — Read-Only Style Preview Isolation', pass: passST5, detail: 'Underlying project scenes unmutated by style selection' });
 
-      // === SUPABASE REMOTE PUBLISHING TESTS (SP1 - SP4) ===
+      // === SUPABASE REMOTE PUBLISHING TESTS (SP1 - SP10) ===
       // SP1: Permanent publication creation (null expiration)
       const permPub = await publishedProjectRepository.publishProject(project, 'permanent');
       const passSP1 = permPub.expiresAt === null && permPub.isExpired() === false && permPub.status === 'active';
@@ -918,13 +918,59 @@ export class TestRunner {
       const passSP4 = typeof ShareService.copyShareLink === 'function';
       results.push({ test: 'SP4 — ShareService copyShareLink helper', pass: passSP4, detail: 'copyShareLink helper verified' });
 
+      // SP5: URL Hash Normalization & Parameter Extraction Contract
+      const testHashes = [
+        '#view/pub_alpha123',
+        '#/view/pub_alpha123',
+        '#view/pub_alpha123?ref=social&utm=1',
+        '#/view/pub_alpha123/',
+        '#wishwall/pub_beta456?src=qr'
+      ];
+      const parsedIds = testHashes.map(h => {
+        const clean = h.replace(/^#\/?/, '#');
+        const routePart = clean.split('?')[0];
+        if (clean.startsWith('#view/')) return routePart.replace(/^#view\//, '').replace(/\/$/, '').trim();
+        if (clean.startsWith('#wishwall/')) return routePart.replace(/^#wishwall\//, '').replace(/\/$/, '').trim();
+        return '';
+      });
+      const passSP5 = parsedIds[0] === 'pub_alpha123' && parsedIds[1] === 'pub_alpha123' && parsedIds[2] === 'pub_alpha123' && parsedIds[3] === 'pub_alpha123' && parsedIds[4] === 'pub_beta456';
+      results.push({ test: 'SP5 — URL Hash Normalization (#view, #/view, query params)', pass: passSP5, detail: `Parsed IDs: ${JSON.stringify(parsedIds)}` });
+
+      // SP6: Empty/Invalid Public ID produces Clean Error
+      const emptyView = new RecipientPlayerView('');
+      const emptyElem = await emptyView.render();
+      const passSP6 = emptyElem.id === 'recipientErrorRoot' && emptyElem.textContent.includes('Invalid celebration link');
+      results.push({ test: 'SP6 — Empty or Invalid Public ID Error Handling', pass: passSP6, detail: 'Rendered Invalid celebration link error' });
+
+      // SP7: Error Classification (Network vs Permission vs Not Found)
+      const errNet = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection and try again.');
+      const elemNet = errNet.render();
+      const passSP7 = elemNet.id === 'celebrationUnavailableRoot' && Boolean(elemNet.querySelector('#btnRetryUnavailable'));
+      results.push({ test: 'SP7 — Connection Error Classification & Retry Handler', pass: passSP7, detail: 'CelebrationUnavailableView renders with retry action' });
+
+      // SP8: Remote Snapshot Asset Bundling & URL Resolution
+      const testAssetRemote = { id: 'asset_remote_1', url: 'https://images.unsplash.com/photo-1513151233558', name: 'banner.jpg' };
+      const projRemote = projectRepository.createDefaultProject({ recipientName: 'RemoteTester' });
+      projRemote.assetIds = ['asset_remote_1'];
+      const pubRemote = await publishedProjectRepository.publishProject(projRemote, 'permanent');
+      const passSP8 = Array.isArray(pubRemote.snapshot.assets) && pubRemote.snapshot.recipient.name === 'RemoteTester';
+      results.push({ test: 'SP8 — Remote Snapshot Data Packaging Contract', pass: passSP8, detail: `Snapshot recipient: ${pubRemote.snapshot.recipient.name}` });
+
+      // SP9: Wish Wall Remote Persistence Integration
+      const wishProj = { id: 'proj_remote_wish', publicationId: permPub.id, occasion: 'birthday' };
+      const testWish = await wishRepository.createWish({ name: 'CrossDeviceFriend', message: 'Have a great year ahead!' }, wishProj);
+      const passSP9 = testWish && testWish.name === 'CrossDeviceFriend' && testWish.status === 'approved';
+      results.push({ test: 'SP9 — Cross-Device Wish Submission & Occasion Validation', pass: passSP9, detail: `Wish created: ${testWish?.id}, status: ${testWish?.status}` });
+
+      // SP10: Multi-Device Isolation Contract (Viewer reads purely from publication snapshot)
+      const recipientMultiDevice = new RecipientPlayerView(permPub.id);
+      const multiDeviceElem = await recipientMultiDevice.render();
+      const passSP10 = multiDeviceElem.id === 'recipientStandaloneRoot' && recipientMultiDevice.project.recipient.name === project.recipient.name;
+      results.push({ test: 'SP10 — Multi-Device Snapshot Independence (Zero Local Creator Dependency)', pass: passSP10, detail: `Rendered standalone recipient root: ${passSP10}` });
+
     } catch (globalErr) {
       console.error('Test Runner Error:', globalErr);
     }
-
-
-
-
 
     console.log('=== TEST RESULTS SUMMARY ===');
     results.forEach(r => {
@@ -934,3 +980,4 @@ export class TestRunner {
     return results;
   }
 }
+

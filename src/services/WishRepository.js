@@ -1,12 +1,14 @@
 /**
  * Birthday Studio - Wish Repository (Section 32, 42, 43, 62, 70 & Requirement 17)
  * Validations: Publication Active Status, Occasion Safety & Anti-Spam
+ * Supports Remote Supabase Storage for Public Celebrations & Local IndexedDB Cache
  */
 
 import { dbService } from './IndexedDBService.js';
 import { Wish } from '../models/Wish.js';
 import { MessageLibrary } from '../data/messages/MessageLibrary.js';
 import { publishedProjectRepository } from './PublishedProjectRepository.js';
+import { supabaseService } from './supabaseClient.js';
 
 class WishRepository {
   constructor() {
@@ -22,7 +24,7 @@ class WishRepository {
     // 0. Requirement 17 & TEST D: Validate publication status before accepting wish
     if (project.publicationId) {
       const pubMeta = await publishedProjectRepository.getPublicationMetadata(project.publicationId);
-      if (!pubMeta || pubMeta.status !== 'active' || Date.now() >= pubMeta.expiresAt) {
+      if (!pubMeta || pubMeta.status !== 'active' || (pubMeta.expiresAt && Date.now() >= pubMeta.expiresAt)) {
         throw new Error('This celebration has ended. New wishes can no longer be submitted.');
       }
     }
@@ -95,6 +97,16 @@ class WishRepository {
       status: initialStatus
     });
 
+    // 1. Save to Supabase if configured
+    if (supabaseService.isConfigured()) {
+      try {
+        await supabaseService.saveWish(wish.toJSON());
+      } catch (e) {
+        console.warn('[WishRepository] Remote wish save error:', e);
+      }
+    }
+
+    // 2. Local cache
     await dbService.put('wishes', wish.toJSON());
     this.lastSubmissionTime = Date.now();
     return wish;
@@ -111,6 +123,30 @@ class WishRepository {
   }
 
   async getApprovedWishes(projectId) {
+    // 1. Fetch from Supabase if configured
+    if (supabaseService.isConfigured()) {
+      try {
+        const remoteList = await supabaseService.getApprovedWishes(projectId);
+        if (Array.isArray(remoteList) && remoteList.length > 0) {
+          return remoteList.map(w => new Wish({
+            id: w.id,
+            projectId: w.project_id || w.projectId,
+            occasion: w.occasion,
+            name: w.name,
+            isAnonymous: w.is_anonymous !== undefined ? w.is_anonymous : w.isAnonymous,
+            message: w.message,
+            messageSource: w.message_source || w.messageSource,
+            presetMessageId: w.preset_message_id || w.presetMessageId,
+            status: w.status,
+            createdAt: w.created_at || w.createdAt
+          }));
+        }
+      } catch (e) {
+        console.warn('[WishRepository] Remote wishes fetch error:', e);
+      }
+    }
+
+    // 2. Local fallback
     const all = await this.getProjectWishes(projectId);
     return all.filter(w => w.status === 'approved');
   }
@@ -124,6 +160,11 @@ class WishRepository {
     const wish = await this.getWish(wishId);
     if (!wish) return null;
     wish.status = 'approved';
+    if (supabaseService.isConfigured()) {
+      try {
+        await supabaseService.saveWish(wish.toJSON());
+      } catch (e) {}
+    }
     await dbService.put('wishes', wish.toJSON());
     return wish;
   }
@@ -132,6 +173,11 @@ class WishRepository {
     const wish = await this.getWish(wishId);
     if (!wish) return null;
     wish.status = 'rejected';
+    if (supabaseService.isConfigured()) {
+      try {
+        await supabaseService.saveWish(wish.toJSON());
+      } catch (e) {}
+    }
     await dbService.put('wishes', wish.toJSON());
     return wish;
   }
@@ -153,3 +199,4 @@ class WishRepository {
 }
 
 export const wishRepository = new WishRepository();
+

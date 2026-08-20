@@ -27,7 +27,7 @@ async function getCreateClient() {
   }
 }
 
-class SupabaseService {
+export class SupabaseService {
   constructor() {
     this.client = null;
     this.initPromise = null;
@@ -39,20 +39,28 @@ class SupabaseService {
   getSupabaseUrl() {
     // 1. window.__ENV__
     if (typeof window !== 'undefined' && window.__ENV__) {
-      if (window.__ENV__.VITE_SUPABASE_URL) return window.__ENV__.VITE_SUPABASE_URL;
-      if (window.__ENV__.SUPABASE_URL) return window.__ENV__.SUPABASE_URL;
+      if (window.__ENV__.VITE_SUPABASE_URL) return window.__ENV__.VITE_SUPABASE_URL.trim();
+      if (window.__ENV__.SUPABASE_URL) return window.__ENV__.SUPABASE_URL.trim();
     }
 
     // 2. Vite import.meta.env
     try {
       if (typeof import.meta !== 'undefined' && import.meta.env) {
-        if (import.meta.env.VITE_SUPABASE_URL) return import.meta.env.VITE_SUPABASE_URL;
-        if (import.meta.env.SUPABASE_URL) return import.meta.env.SUPABASE_URL;
+        if (import.meta.env.VITE_SUPABASE_URL) return import.meta.env.VITE_SUPABASE_URL.trim();
+        if (import.meta.env.SUPABASE_URL) return import.meta.env.SUPABASE_URL.trim();
       }
     } catch (e) {}
 
-    // 3. AppConfig fallback
-    return APP_CONFIG.SUPABASE_URL || '';
+    // 3. localStorage override (useful for developer testing in browser)
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const localUrl = window.localStorage.getItem('VITE_SUPABASE_URL') || window.localStorage.getItem('SUPABASE_URL');
+        if (localUrl && localUrl.trim().length > 0) return localUrl.trim();
+      }
+    } catch (e) {}
+
+    // 4. AppConfig fallback
+    return (APP_CONFIG.SUPABASE_URL || '').trim();
   }
 
   /**
@@ -61,21 +69,30 @@ class SupabaseService {
   getSupabaseAnonKey() {
     // 1. window.__ENV__
     if (typeof window !== 'undefined' && window.__ENV__) {
-      if (window.__ENV__.VITE_SUPABASE_ANON_KEY) return window.__ENV__.VITE_SUPABASE_ANON_KEY;
-      if (window.__ENV__.SUPABASE_ANON_KEY) return window.__ENV__.SUPABASE_ANON_KEY;
-      if (window.__ENV__.VITE_SUPABASE_KEY) return window.__ENV__.VITE_SUPABASE_KEY;
+      if (window.__ENV__.VITE_SUPABASE_ANON_KEY) return window.__ENV__.VITE_SUPABASE_ANON_KEY.trim();
+      if (window.__ENV__.SUPABASE_ANON_KEY) return window.__ENV__.SUPABASE_ANON_KEY.trim();
+      if (window.__ENV__.VITE_SUPABASE_KEY) return window.__ENV__.VITE_SUPABASE_KEY.trim();
     }
 
     // 2. Vite import.meta.env
     try {
       if (typeof import.meta !== 'undefined' && import.meta.env) {
-        if (import.meta.env.VITE_SUPABASE_ANON_KEY) return import.meta.env.VITE_SUPABASE_ANON_KEY;
-        if (import.meta.env.SUPABASE_ANON_KEY) return import.meta.env.SUPABASE_ANON_KEY;
+        if (import.meta.env.VITE_SUPABASE_ANON_KEY) return import.meta.env.VITE_SUPABASE_ANON_KEY.trim();
+        if (import.meta.env.SUPABASE_ANON_KEY) return import.meta.env.SUPABASE_ANON_KEY.trim();
+        if (import.meta.env.VITE_SUPABASE_KEY) return import.meta.env.VITE_SUPABASE_KEY.trim();
       }
     } catch (e) {}
 
-    // 3. AppConfig fallback
-    return APP_CONFIG.SUPABASE_ANON_KEY || '';
+    // 3. localStorage override
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const localKey = window.localStorage.getItem('VITE_SUPABASE_ANON_KEY') || window.localStorage.getItem('SUPABASE_ANON_KEY') || window.localStorage.getItem('VITE_SUPABASE_KEY');
+        if (localKey && localKey.trim().length > 0) return localKey.trim();
+      }
+    } catch (e) {}
+
+    // 4. AppConfig fallback
+    return (APP_CONFIG.SUPABASE_ANON_KEY || '').trim();
   }
 
   /**
@@ -84,7 +101,22 @@ class SupabaseService {
   isConfigured() {
     const url = this.getSupabaseUrl();
     const key = this.getSupabaseAnonKey();
-    return Boolean(url && key && url.trim().length > 0 && key.trim().length > 0 && !url.includes('YOUR_SUPABASE'));
+    return Boolean(
+      url &&
+      key &&
+      url.length > 0 &&
+      key.length > 0 &&
+      !url.includes('YOUR_SUPABASE') &&
+      !key.includes('YOUR_SUPABASE')
+    );
+  }
+
+  /**
+   * Reset client instance (used for testing or dynamic config changes)
+   */
+  resetClient() {
+    this.client = null;
+    this.initPromise = null;
   }
 
   /**
@@ -96,13 +128,13 @@ class SupabaseService {
 
     this.initPromise = (async () => {
       if (!this.isConfigured()) {
-        console.warn('[SupabaseClient] Supabase credentials not configured. Using local fallback.');
+        console.warn('[SupabaseClient] Supabase credentials not configured.');
         return null;
       }
 
       const createClient = await getCreateClient();
       if (!createClient) {
-        console.warn('[SupabaseClient] createClient function could not be loaded.');
+        console.warn('[SupabaseClient] createClient function could not be loaded from ESM CDN or window.');
         return null;
       }
 
@@ -116,6 +148,7 @@ class SupabaseService {
             autoRefreshToken: false
           }
         });
+        console.log('[SupabaseClient] Supabase client initialized successfully with endpoint:', url);
         return this.client;
       } catch (err) {
         console.error('[SupabaseClient] Initialization error:', err);
@@ -124,6 +157,58 @@ class SupabaseService {
     })();
 
     return this.initPromise;
+  }
+
+  /**
+   * Classify an error from Supabase
+   */
+  classifyError(error) {
+    if (!error) return { type: 'none', message: '' };
+
+    const msg = (error.message || '').toLowerCase();
+    const code = error.code || '';
+    const status = error.status || error.statusCode || 0;
+
+    // Permission / RLS errors
+    if (
+      code === '42501' ||
+      status === 401 ||
+      status === 403 ||
+      msg.includes('permission') ||
+      msg.includes('jwt') ||
+      msg.includes('row-level security') ||
+      msg.includes('policy')
+    ) {
+      return {
+        type: 'permission',
+        message: 'Permission denied by database security policy. Please verify Supabase RLS configuration.',
+        originalError: error
+      };
+    }
+
+    // Network / connection errors
+    if (
+      msg.includes('fetch') ||
+      msg.includes('network') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('timeout') ||
+      msg.includes('connection') ||
+      status === 0 ||
+      status >= 500
+    ) {
+      return {
+        type: 'network',
+        message: 'Unable to connect to celebration database. Please check your internet connection and try again.',
+        originalError: error
+      };
+    }
+
+    // Generic DB error
+    return {
+      type: 'database',
+      message: error.message || 'Database operation failed.',
+      originalError: error
+    };
   }
 
   /**
@@ -157,6 +242,7 @@ class SupabaseService {
     const filePath = `${pubId}/${safeAssetId}.${ext}`;
 
     try {
+      console.log(`[SupabaseClient] Uploading asset ${filePath} to bucket ${bucketName}...`);
       const { data, error } = await client.storage
         .from(bucketName)
         .upload(filePath, blobOrFile, {
@@ -174,7 +260,9 @@ class SupabaseService {
         .from(bucketName)
         .getPublicUrl(filePath);
 
-      return publicUrlData?.publicUrl || null;
+      const publicUrl = publicUrlData?.publicUrl || null;
+      console.log(`[SupabaseClient] Asset uploaded successfully. Public CDN URL: ${publicUrl}`);
+      return publicUrl;
     } catch (err) {
       console.error('[SupabaseClient] Asset upload exception:', err);
       return null;
@@ -183,19 +271,31 @@ class SupabaseService {
 
   /**
    * Save publication record into Supabase Postgres
+   * Throws on error so the caller knows whether the database record was actually created.
    */
   async savePublication(record) {
     const client = await this.getClient();
-    if (!client) throw new Error('Supabase client not available');
+    if (!client) {
+      throw new Error('Supabase client is not available. Please verify credentials.');
+    }
 
     const payload = {
       id: record.id,
+      project_id: record.project_id || record.projectId || '',
       project_data: record.project_data || record.snapshot || {},
       created_at: record.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
       expires_at: record.expires_at || null,
-      is_public: record.is_public !== undefined ? record.is_public : true
+      is_public: record.is_public !== undefined ? record.is_public : (record.isPublic !== undefined ? record.isPublic : true),
+      version: record.version || 1
     };
+
+    console.log(`[SupabaseClient] Saving publication ${record.id} to Supabase...`, {
+      id: payload.id,
+      projectId: payload.project_id,
+      expiresAt: payload.expires_at,
+      isPublic: payload.is_public
+    });
 
     const { data, error } = await client
       .from('published_projects')
@@ -204,10 +304,19 @@ class SupabaseService {
       .single();
 
     if (error) {
-      console.error('[SupabaseClient] savePublication error:', error);
-      throw error;
+      const classified = this.classifyError(error);
+      console.error('[SupabaseClient] savePublication error:', {
+        pubId: record.id,
+        error,
+        classified
+      });
+      const err = new Error(classified.message);
+      err.type = classified.type;
+      err.originalError = error;
+      throw err;
     }
 
+    console.log(`[SupabaseClient] Publication ${record.id} saved successfully in Supabase:`, data);
     return data;
   }
 
@@ -218,6 +327,7 @@ class SupabaseService {
     const client = await this.getClient();
     if (!client) return null;
 
+    console.log(`[SupabaseClient] Querying celebration snapshot for public ID: "${pubId}"`);
     const { data, error } = await client
       .from('published_projects')
       .select('*')
@@ -225,9 +335,24 @@ class SupabaseService {
       .maybeSingle();
 
     if (error) {
-      console.error('[SupabaseClient] getPublication error:', error);
-      throw error;
+      const classified = this.classifyError(error);
+      console.error('[SupabaseClient] getPublication error:', {
+        pubId,
+        error,
+        classified
+      });
+      const err = new Error(classified.message);
+      err.type = classified.type;
+      err.originalError = error;
+      throw err;
     }
+
+    console.log(`[SupabaseClient] getPublication result for "${pubId}":`, {
+      exists: Boolean(data),
+      id: data?.id,
+      is_public: data?.is_public,
+      expires_at: data?.expires_at
+    });
 
     return data;
   }
@@ -239,19 +364,100 @@ class SupabaseService {
     const client = await this.getClient();
     if (!client) return null;
 
+    console.log(`[SupabaseClient] Querying publication metadata for public ID: "${pubId}"`);
     const { data, error } = await client
       .from('published_projects')
-      .select('id, created_at, updated_at, expires_at, is_public')
+      .select('id, project_id, created_at, updated_at, expires_at, is_public')
       .eq('id', pubId)
       .maybeSingle();
 
     if (error) {
-      console.error('[SupabaseClient] getPublicationMetadata error:', error);
-      throw error;
+      const classified = this.classifyError(error);
+      console.error('[SupabaseClient] getPublicationMetadata error:', {
+        pubId,
+        error,
+        classified
+      });
+      const err = new Error(classified.message);
+      err.type = classified.type;
+      err.originalError = error;
+      throw err;
     }
 
+    console.log(`[SupabaseClient] getPublicationMetadata result for "${pubId}":`, {
+      exists: Boolean(data),
+      id: data?.id,
+      is_public: data?.is_public,
+      expires_at: data?.expires_at
+    });
+
     return data;
+  }
+
+  /**
+   * Save a community wish to Supabase
+   */
+  async saveWish(wishData) {
+    const client = await this.getClient();
+    if (!client) return null;
+
+    const payload = {
+      id: wishData.id,
+      project_id: wishData.projectId || wishData.project_id || '',
+      occasion: wishData.occasion || 'birthday',
+      name: wishData.isAnonymous ? 'Anonymous' : (wishData.name || 'Friend'),
+      is_anonymous: Boolean(wishData.isAnonymous),
+      message: wishData.message || '',
+      message_source: wishData.messageSource || 'custom',
+      preset_message_id: wishData.presetMessageId || null,
+      status: wishData.status || 'approved',
+      created_at: wishData.createdAt || Date.now()
+    };
+
+    try {
+      const { data, error } = await client
+        .from('wishes')
+        .upsert(payload, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('[SupabaseClient] saveWish error:', error);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn('[SupabaseClient] saveWish exception:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch approved wishes for a project from Supabase
+   */
+  async getApprovedWishes(projectId) {
+    const client = await this.getClient();
+    if (!client) return [];
+
+    try {
+      const { data, error } = await client
+        .from('wishes')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[SupabaseClient] getApprovedWishes error:', error);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.warn('[SupabaseClient] getApprovedWishes exception:', e);
+      return [];
+    }
   }
 }
 
 export const supabaseService = new SupabaseService();
+

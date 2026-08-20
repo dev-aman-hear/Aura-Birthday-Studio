@@ -65,6 +65,8 @@ export class PublishedProjectRepository {
     const now = Date.now();
     const expiresAt = validDays ? now + (validDays * 24 * 60 * 60 * 1000) : null;
 
+    console.log(`[PublishedProjectRepository] Initiating publication for project ${project.id}. Generated pubId: ${pubId}`);
+
     // Create immutable snapshot copy of creator project
     const snapshotData = JSON.parse(JSON.stringify(project));
 
@@ -80,6 +82,11 @@ export class PublishedProjectRepository {
           Object.values(s.slots).forEach(val => {
             if (Array.isArray(val)) val.forEach(id => relevantAssetIds.add(id));
             else if (typeof val === 'string') relevantAssetIds.add(val);
+          });
+        }
+        if (s.elements) {
+          s.elements.forEach(el => {
+            if (el.assetId) relevantAssetIds.add(el.assetId);
           });
         }
       });
@@ -131,7 +138,7 @@ export class PublishedProjectRepository {
         }
       }
     } catch (e) {
-      console.warn('[PublishedProjectRepository] Snapshot asset bundling error:', e);
+      console.warn('[PublishedProjectRepository] Snapshot asset bundling warning:', e);
     }
 
     const publication = new Publication({
@@ -146,28 +153,36 @@ export class PublishedProjectRepository {
       snapshot: snapshotData
     });
 
-    // 1. Remote Supabase persistence
+    // 1. Remote Supabase persistence (Authoritative)
     if (supabaseService.isConfigured()) {
       try {
         await supabaseService.savePublication({
           id: pubId,
+          project_id: project.id,
           project_data: snapshotData,
           created_at: new Date(now).toISOString(),
           updated_at: new Date(now).toISOString(),
           expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
           is_public: true
         });
+        console.log(`[PublishedProjectRepository] Authoritative Supabase record successfully written for ${pubId}`);
       } catch (remoteErr) {
-        console.error('[PublishedProjectRepository] Failed to save publication to Supabase:', remoteErr);
-        // Continue to save locally so creator doesn't lose work
+        console.error('[PublishedProjectRepository] Remote Supabase publication save failed:', remoteErr);
+        // Save to local cache so work is not lost
+        try {
+          await dbService.put('published_projects', publication.toJSON());
+        } catch (e) {}
+        throw remoteErr;
       }
+    } else {
+      console.warn('[PublishedProjectRepository] Supabase not configured. Saved to local IndexedDB only.');
     }
 
     // 2. Local IndexedDB cache for creator offline access & dashboard
     try {
       await dbService.put('published_projects', publication.toJSON());
     } catch (dbErr) {
-      console.warn('[PublishedProjectRepository] Local cache save failed:', dbErr);
+      console.warn('[PublishedProjectRepository] Local cache save warning:', dbErr);
     }
 
     // Link publication ID to creator project
@@ -179,10 +194,15 @@ export class PublishedProjectRepository {
   /**
    * STEP 1: Metadata Pre-Flight Gate
    * Fetches ONLY publication metadata WITHOUT loading heavy snapshot assets/scenes
-   * Returns: { exists: boolean, id: string, status: string, isExpired: boolean, isPublic: boolean, expiresAt: number|null, publishedAt: number, error?: string }
+   * Returns:
+   *   { exists: true, id: string, status: string, isExpired: boolean, isPublic: boolean, expiresAt: number|null, publishedAt: number }
+   *   OR { exists: false, status: 'not_found' }
+   *   OR { error: 'network'|'permission'|'database', message: string }
    */
   static async getPublicationMetadata(pubId) {
     if (!pubId) return null;
+
+    console.log(`[PublishedProjectRepository] Fetching publication metadata for ID: "${pubId}"`);
 
     // 1. Query Supabase Postgres first if configured
     if (supabaseService.isConfigured()) {
@@ -205,18 +225,42 @@ export class PublishedProjectRepository {
             isExpired: isExpired,
             isPublic: isPublic
           };
+        } else {
+          // Explicit null from Supabase: record was not found in remote DB
+          // Check local IndexedDB in case creator is testing offline
+          const raw = await dbService.get('published_projects', pubId);
+          if (raw) {
+            const pub = Publication.fromJSON(raw);
+            return {
+              exists: true,
+              id: pub.id,
+              projectId: pub.projectId,
+              publishedAt: pub.publishedAt,
+              expiresAt: pub.expiresAt,
+              durationDays: pub.durationDays,
+              status: pub.isExpired() ? 'expired' : pub.status,
+              isExpired: pub.isExpired(),
+              isPublic: pub.isPublic !== false
+            };
+          }
+          return { exists: false, status: 'not_found' };
         }
       } catch (remoteErr) {
-        console.warn('[PublishedProjectRepository] Supabase metadata query error, checking local fallback:', remoteErr);
+        console.error('[PublishedProjectRepository] Supabase metadata query error:', remoteErr);
+        // If it's a real network or permission error, propagate error object so view displays right screen
+        return {
+          exists: false,
+          error: remoteErr.type || 'network',
+          message: remoteErr.message || 'Unable to connect to celebration database.'
+        };
       }
     }
 
-    // 2. Fallback to Local IndexedDB (for creator device or offline/legacy local tests)
+    // 2. Fallback to Local IndexedDB when Supabase is not configured (offline / legacy local tests)
     const raw = await dbService.get('published_projects', pubId);
     if (!raw) {
-      return null;
+      return { exists: false, status: 'not_found' };
     }
-
 
     const pub = Publication.fromJSON(raw);
     if (pub.isExpired() && pub.status === 'active') {
@@ -246,6 +290,8 @@ export class PublishedProjectRepository {
   static async getPublishedSnapshot(pubId) {
     if (!pubId) return null;
 
+    console.log(`[PublishedProjectRepository] Fetching snapshot payload for ID: "${pubId}"`);
+
     // 1. Query Supabase Postgres first if configured
     if (supabaseService.isConfigured()) {
       try {
@@ -260,9 +306,19 @@ export class PublishedProjectRepository {
             await dbService.put('published_projects', pub.toJSON());
           } catch (e) {}
           return pub;
+        } else {
+          // If remote is null, check local fallback
+          const raw = await dbService.get('published_projects', pubId);
+          if (raw) {
+            const pub = Publication.fromJSON(raw);
+            if (pub.isExpired()) return null;
+            return pub;
+          }
+          return null;
         }
       } catch (remoteErr) {
-        console.warn('[PublishedProjectRepository] Supabase snapshot fetch error, checking local fallback:', remoteErr);
+        console.error('[PublishedProjectRepository] Supabase snapshot fetch error:', remoteErr);
+        throw remoteErr;
       }
     }
 
@@ -364,6 +420,7 @@ export class PublishedProjectRepository {
       try {
         await supabaseService.savePublication({
           id: pub.id,
+          project_id: projectId,
           project_data: pub.snapshot,
           updated_at: new Date().toISOString()
         });
