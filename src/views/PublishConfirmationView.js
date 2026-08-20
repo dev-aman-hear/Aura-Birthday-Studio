@@ -39,6 +39,7 @@ export class PublishConfirmationView {
     const occasion = (this.project?.occasion || 'birthday').toUpperCase();
     const sceneCount = this.project?.scenes?.length || 0;
     const mediaCount = this.project?.assetIds?.length || 0;
+    const totalDuration = (this.project?.scenes || []).reduce((acc, s) => acc + (s.duration || 6), 0);
     const isConfigured = supabaseService.isConfigured();
 
     modal.innerHTML = `

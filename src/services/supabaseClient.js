@@ -163,7 +163,14 @@ export class SupabaseService {
         this.client = createClient(url, key, {
           auth: {
             persistSession: false,
-            autoRefreshToken: false
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+            storageKey: null,
+            storage: {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {}
+            }
           }
         });
         console.log('[SupabaseClient] Supabase client initialized successfully with endpoint:', url);
@@ -500,7 +507,17 @@ export class SupabaseService {
 
     try {
       const testClient = createClient(url, key, {
-        auth: { persistSession: false, autoRefreshToken: false }
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          storageKey: null,
+          storage: {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {}
+          }
+        }
       });
       const { data, error } = await testClient
         .from('published_projects')
