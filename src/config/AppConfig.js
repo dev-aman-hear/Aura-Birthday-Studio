@@ -18,9 +18,8 @@ export const APP_CONFIG = {
     'babyShower'
   ],
   // Supabase Configuration
-  // Values can also be set via VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY or window.__ENV__
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://ygvmpsynlrxlaenketks.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_Lqt8W7luDHmNgTJaSn7Qvw_JX2GUDxy',
   SUPABASE_STORAGE_BUCKET: 'published-assets'
 };
 

@@ -52,6 +52,7 @@ export class SupabaseService {
     // 1. window.__ENV__
     if (typeof window !== 'undefined' && window.__ENV__) {
       if (window.__ENV__.VITE_SUPABASE_URL) return window.__ENV__.VITE_SUPABASE_URL.trim();
+      if (window.__ENV__.NEXT_PUBLIC_SUPABASE_URL) return window.__ENV__.NEXT_PUBLIC_SUPABASE_URL.trim();
       if (window.__ENV__.SUPABASE_URL) return window.__ENV__.SUPABASE_URL.trim();
     }
 
@@ -59,6 +60,7 @@ export class SupabaseService {
     try {
       if (typeof import.meta !== 'undefined' && import.meta.env) {
         if (import.meta.env.VITE_SUPABASE_URL) return import.meta.env.VITE_SUPABASE_URL.trim();
+        if (import.meta.env.NEXT_PUBLIC_SUPABASE_URL) return import.meta.env.NEXT_PUBLIC_SUPABASE_URL.trim();
         if (import.meta.env.SUPABASE_URL) return import.meta.env.SUPABASE_URL.trim();
       }
     } catch (e) {}
@@ -66,7 +68,7 @@ export class SupabaseService {
     // 3. localStorage override (useful for developer testing in browser)
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const localUrl = window.localStorage.getItem('VITE_SUPABASE_URL') || window.localStorage.getItem('SUPABASE_URL');
+        const localUrl = window.localStorage.getItem('VITE_SUPABASE_URL') || window.localStorage.getItem('NEXT_PUBLIC_SUPABASE_URL') || window.localStorage.getItem('SUPABASE_URL');
         if (localUrl && localUrl.trim().length > 0) return localUrl.trim();
       }
     } catch (e) {}
@@ -82,6 +84,8 @@ export class SupabaseService {
     // 1. window.__ENV__
     if (typeof window !== 'undefined' && window.__ENV__) {
       if (window.__ENV__.VITE_SUPABASE_ANON_KEY) return window.__ENV__.VITE_SUPABASE_ANON_KEY.trim();
+      if (window.__ENV__.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return window.__ENV__.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.trim();
+      if (window.__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY) return window.__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY.trim();
       if (window.__ENV__.SUPABASE_ANON_KEY) return window.__ENV__.SUPABASE_ANON_KEY.trim();
       if (window.__ENV__.VITE_SUPABASE_KEY) return window.__ENV__.VITE_SUPABASE_KEY.trim();
     }
@@ -90,6 +94,8 @@ export class SupabaseService {
     try {
       if (typeof import.meta !== 'undefined' && import.meta.env) {
         if (import.meta.env.VITE_SUPABASE_ANON_KEY) return import.meta.env.VITE_SUPABASE_ANON_KEY.trim();
+        if (import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.trim();
+        if (import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.trim();
         if (import.meta.env.SUPABASE_ANON_KEY) return import.meta.env.SUPABASE_ANON_KEY.trim();
         if (import.meta.env.VITE_SUPABASE_KEY) return import.meta.env.VITE_SUPABASE_KEY.trim();
       }
@@ -98,7 +104,7 @@ export class SupabaseService {
     // 3. localStorage override
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const localKey = window.localStorage.getItem('VITE_SUPABASE_ANON_KEY') || window.localStorage.getItem('SUPABASE_ANON_KEY') || window.localStorage.getItem('VITE_SUPABASE_KEY');
+        const localKey = window.localStorage.getItem('VITE_SUPABASE_ANON_KEY') || window.localStorage.getItem('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') || window.localStorage.getItem('NEXT_PUBLIC_SUPABASE_ANON_KEY') || window.localStorage.getItem('SUPABASE_ANON_KEY') || window.localStorage.getItem('VITE_SUPABASE_KEY');
         if (localKey && localKey.trim().length > 0) return localKey.trim();
       }
     } catch (e) {}
