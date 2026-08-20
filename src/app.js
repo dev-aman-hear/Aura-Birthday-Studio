@@ -3,6 +3,7 @@
  * Phase 10: Birthday Studio 3.0 Final Product & Launch Readiness
  */
 
+import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1/dist/index.js';
 import { authRepository } from './services/AuthRepository.js';
 import { projectRepository } from './services/ProjectRepository.js';
 import { assetRepository } from './services/AssetRepository.js';
@@ -650,6 +651,9 @@ export class BirthdayStudioApp {
 
 // Global initialization
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Vercel Speed Insights
+  injectSpeedInsights();
+  
   const app = new BirthdayStudioApp();
   app.start();
 });
