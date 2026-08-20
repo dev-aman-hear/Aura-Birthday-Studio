@@ -4,6 +4,7 @@
  */
 
 import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1/+esm';
+import { inject as injectAnalytics } from '@vercel/analytics';
 import { authRepository } from './services/AuthRepository.js';
 import { projectRepository } from './services/ProjectRepository.js';
 import { assetRepository } from './services/AssetRepository.js';
@@ -679,6 +680,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch (e) {
     console.debug('[Vercel Speed Insights] Init skipped:', e);
+  }
+
+  // Initialize Vercel Web Analytics safely
+  try {
+    if (typeof injectAnalytics === 'function') {
+      injectAnalytics();
+    }
+  } catch (e) {
+    console.debug('[Vercel Analytics] Init skipped:', e);
   }
   
   const app = new BirthdayStudioApp();
