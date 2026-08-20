@@ -138,7 +138,29 @@ export class BirthdayStudioApp {
   }
 
   async route() {
-    const rawHash = window.location.hash || '#dashboard';
+    let rawHash = window.location.hash || '';
+
+    // Mobile fallback: Check pathname and query params if hash is empty
+    if (!rawHash) {
+      const pathname = window.location.pathname || '';
+      if (pathname.startsWith('/view/')) {
+        rawHash = '#' + pathname.substring(1);
+      } else if (pathname.startsWith('/wishwall/')) {
+        rawHash = '#' + pathname.substring(1);
+      } else {
+        const search = new URLSearchParams(window.location.search);
+        const viewId = search.get('view') || search.get('id');
+        const wallId = search.get('wishwall');
+        if (viewId) {
+          rawHash = `#view/${viewId}`;
+        } else if (wallId) {
+          rawHash = `#wishwall/${wallId}`;
+        } else {
+          rawHash = '#dashboard';
+        }
+      }
+    }
+
     // Normalize hash: handles #view/..., #/view/..., #wishwall/..., #/wishwall/..., etc.
     const cleanHash = rawHash.replace(/^#\/?/, '#');
     const hash = cleanHash;

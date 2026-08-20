@@ -21,10 +21,18 @@
   padding: 20px;
 }
 
+@media (max-width: 640px) {
+  .preview-player-overlay,
+  .draft-preview-overlay {
+    padding: 0 !important;
+  }
+}
+
 .player-container {
   width: 100%;
   max-width: 920px;
   height: 90vh;
+  height: 90dvh;
   max-height: 720px;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
@@ -36,6 +44,16 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
+}
+
+@media (max-width: 640px) {
+  .player-container {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
 }
 
 .player-container::-webkit-scrollbar {

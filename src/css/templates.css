@@ -458,3 +458,58 @@
   transform: translateY(0) scale(0.98);
 }
 
+/* ==========================================================================
+   MOBILE RESPONSIVE RULES FOR TEMPLATES (<768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .template-container {
+    padding: 16px 12px;
+  }
+
+  .hero-title {
+    font-size: clamp(1.6rem, 7vw, 2.6rem);
+    letter-spacing: clamp(2px, 1vw, 4px);
+  }
+
+  .hero-img {
+    width: clamp(120px, 32vw, 170px);
+    height: clamp(120px, 32vw, 170px);
+  }
+
+  .reveal-photo {
+    width: clamp(180px, 65vw, 260px);
+    height: clamp(120px, 45vw, 180px);
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+
+  .gallery-card img {
+    height: 100px;
+  }
+
+  .collage-item img {
+    width: clamp(85px, 26vw, 120px);
+    height: clamp(85px, 26vw, 120px);
+  }
+
+  .timeline-stepper {
+    justify-content: flex-start;
+    padding: 6px 8px 14px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .timeline-card {
+    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
+    height: 170px;
+  }
+
+  .fullscreen-text-overlay {
+    padding: 16px 12px;
+  }
+}
+

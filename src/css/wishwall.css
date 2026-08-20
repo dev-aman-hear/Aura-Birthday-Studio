@@ -1207,21 +1207,43 @@
 }
 
 /* Mobile Responsive */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
+  .wish-wall-scene-container {
+    padding: 16px 12px 90px 12px;
+  }
+
+  .wish-cards-grid,
+  .wish-cards-pinboard {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .wish-submission-card {
     padding: 24px 18px;
     border-radius: 18px;
-    max-height: 92vh;
+    max-height: 90dvh;
   }
+
   .wish-modal-title {
     font-size: 1.25rem;
   }
+
   .wish-type-pill {
     padding: 8px 10px;
     font-size: 0.8rem;
   }
+
   .wish-preset-grid {
-    max-height: 190px;
+    max-height: 180px;
+  }
+
+  .wish-wall-action-bar {
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom, 12px)) 16px;
+  }
+
+  .leave-wish-trigger-btn {
+    min-height: 48px;
+    font-size: 0.95rem;
   }
 }
 

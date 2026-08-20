@@ -47,10 +47,13 @@ html, body {
   color: var(--text);
   font-family: var(--font-family);
   height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   width: 100%;
   overflow-x: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
 }

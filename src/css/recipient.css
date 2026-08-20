@@ -10,6 +10,8 @@
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   background: radial-gradient(circle at 50% 50%, #15102a 0%, #080710 100%);
   color: var(--text, #ffffff);
@@ -19,6 +21,7 @@
   margin: 0;
   padding: 0;
   border: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Full-Bleed Scene Stage Render Area (Edge-to-Edge, Zero Padding) */
@@ -37,11 +40,13 @@
   border: none;
 }
 
-.recipient-scene-render-area .canvas-viewport-frame {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+.recipient-scene-render-area .canvas-viewport-frame,
+.recipient-scene-render-area .recipient-viewport-frame {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: unset !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,12 +56,14 @@
   border: none;
   margin: 0;
   padding: 0;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .recipient-scene-render-area .story-canvas-viewport,
 .recipient-scene-render-area .universal-scene-viewport {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   position: relative;
   overflow: hidden;
   border: none;
@@ -220,27 +227,31 @@
   }
 }
 
-/* Mobile Safe Areas (<768px) */
+/* Mobile Safe Areas & Touch Target Enhancements (<768px) */
 @media (max-width: 767px) {
   .recipient-top-controls {
-    top: max(12px, env(safe-area-inset-top, 12px));
-    right: max(12px, env(safe-area-inset-right, 12px));
-    gap: 8px;
+    top: max(14px, env(safe-area-inset-top, 14px));
+    right: max(14px, env(safe-area-inset-right, 14px));
+    gap: 10px;
   }
 
   .recipient-compact-btn {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .recipient-compact-btn svg {
-    width: 17px;
-    height: 17px;
+    width: 20px;
+    height: 20px;
   }
 
   .recipient-floating-nav {
-    width: 42px;
-    height: 42px;
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
   }
 
   .recipient-floating-nav.nav-prev {
@@ -252,12 +263,14 @@
   }
 
   .recipient-floating-nav svg {
-    width: 19px;
-    height: 19px;
+    width: 22px;
+    height: 22px;
   }
 
   .recipient-welcome-card {
-    padding: 28px 18px;
+    padding: 32px 20px;
+    max-height: 90dvh;
+    overflow-y: auto;
   }
 }
 

@@ -1962,3 +1962,465 @@
   transition: transform 0.05s ease-out;
   transform-origin: center center;
 }
+
+/* ==========================================================================
+   16. COMPLETE RESPONSIVE MOBILE OPTIMIZATION (<768px & <480px)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* Universal Mobile Scene Viewport */
+  .special-scene-viewport {
+    padding: 1rem 0.75rem;
+    height: 100%;
+    height: 100dvh;
+    min-height: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Universal Action Buttons */
+  .btn-scene-action,
+  .btn-begin-cinematic {
+    padding: 0.65rem 1.8rem;
+    font-size: 0.88rem;
+    letter-spacing: 0.18em;
+    min-height: 44px;
+    box-shadow: 0 0 16px rgba(226, 190, 122, 0.25);
+  }
+
+  /* Scene 1 — Cinematic Intro Mobile */
+  .intro-text-sequence {
+    gap: 1.0rem;
+    padding: 0 10px;
+    max-width: 100%;
+  }
+
+  .cinematic-date-text {
+    font-size: clamp(1.8rem, 8vw, 3.2rem);
+    letter-spacing: 0.18em;
+    margin-bottom: 0.25rem;
+  }
+
+  .cinematic-line {
+    font-size: clamp(1.05rem, 4.2vw, 1.6rem);
+    letter-spacing: 0.06em;
+    line-height: 1.35;
+    margin: 0.1rem 0;
+  }
+
+  .cinematic-cta-line {
+    font-size: 0.78rem;
+    letter-spacing: 0.2em;
+    margin-top: 0.6rem;
+  }
+
+  /* Scene 2 — Childhood Memories Mobile */
+  .scene2-container {
+    padding: 0 6px;
+    gap: 0.6rem;
+    justify-content: center;
+  }
+
+  .scene2-line {
+    font-size: clamp(1.15rem, 4.8vw, 1.7rem);
+    letter-spacing: 0.08em;
+  }
+
+  .scene2-memory-stage {
+    gap: 0.8rem;
+  }
+
+  .scene2-viewport {
+    height: 38vh;
+    min-height: 180px;
+    max-height: 320px;
+    border-radius: 12px;
+  }
+
+  .scene2-caption-box {
+    min-height: 1.8rem;
+  }
+
+  .scene2-caption-text {
+    font-size: clamp(0.92rem, 3.6vw, 1.18rem);
+    letter-spacing: 0.08em;
+    padding: 0 8px;
+  }
+
+  .scene2-dots-indicator {
+    margin: 0.3rem 0;
+    gap: 0.25rem;
+  }
+
+  /* Scene 3 — Timeline Mobile */
+  .scene3-container {
+    padding: 0 6px;
+    gap: 0.5rem;
+  }
+
+  .scene3-intro-line {
+    font-size: clamp(1.15rem, 4.8vw, 1.7rem);
+    letter-spacing: 0.08em;
+  }
+
+  .scene3-stage {
+    gap: 0.6rem;
+  }
+
+  .scene3-header {
+    padding: 0 4px;
+  }
+
+  .scene3-memory-title {
+    font-size: clamp(0.92rem, 3.8vw, 1.3rem);
+    letter-spacing: 0.08em;
+  }
+
+  .scene3-year-badge {
+    font-size: 0.72rem;
+    padding: 0.18rem 0.55rem;
+    letter-spacing: 0.15em;
+  }
+
+  .scene3-chapter-counter {
+    font-size: 0.75rem;
+  }
+
+  .scene3-media-wrapper {
+    gap: 6px;
+    width: 100%;
+  }
+
+  .scene3-nav-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 1.2rem;
+  }
+
+  .scene3-viewport {
+    height: 36vh;
+    min-height: 180px;
+    max-height: 300px;
+    border-radius: 12px;
+  }
+
+  .scene3-caption-box {
+    min-height: 1.8rem;
+  }
+
+  .scene3-caption-text {
+    font-size: clamp(0.9rem, 3.5vw, 1.15rem);
+    padding: 0 6px;
+  }
+
+  .scene3-timeline-track {
+    margin-top: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    max-width: 100%;
+  }
+
+  .timeline-node {
+    padding: 0.2rem 0.3rem;
+    gap: 0.25rem;
+  }
+
+  .timeline-node .node-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .timeline-node .node-year {
+    font-size: 0.65rem;
+  }
+
+  /* Scene 4 — Collage Gallery Mobile */
+  .scene4-container {
+    padding: 0.6rem 0.4rem;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+
+  .scene4-title {
+    font-size: clamp(1.15rem, 4.8vw, 1.7rem);
+    letter-spacing: 0.08em;
+  }
+
+  .scene4-subtitle {
+    font-size: clamp(0.82rem, 3.2vw, 1.02rem);
+    min-height: 1.3rem;
+  }
+
+  .scene4-viewport {
+    height: 38vh;
+    min-height: 180px;
+    max-height: 320px;
+    border-radius: 12px;
+  }
+
+  /* Scene 5 — Chaos Montage Mobile */
+  .scene5-container {
+    padding: 0 6px;
+  }
+
+  .scene5-intro-line {
+    font-size: clamp(1.15rem, 4.8vw, 1.7rem);
+  }
+
+  .scene5-card-stage {
+    gap: 0.8rem;
+  }
+
+  .scene5-viewport {
+    height: 36vh;
+    min-height: 180px;
+    max-height: 300px;
+    border-radius: 12px;
+  }
+
+  .scene5-card-title {
+    font-size: clamp(1.15rem, 4.5vw, 1.6rem);
+    letter-spacing: 0.08em;
+  }
+
+  .scene5-card-subtitle {
+    font-size: clamp(0.82rem, 3.2vw, 0.96rem);
+  }
+
+  /* Scene 6 — Personal Letter Mobile */
+  .scene6-container {
+    padding: 0 6px;
+  }
+
+  .scene6-envelope-tag {
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+    letter-spacing: 0.14em;
+  }
+
+  .scene6-envelope-subtag {
+    font-size: 0.85rem;
+  }
+
+  .scene6-envelope-3d {
+    width: 220px;
+    height: 145px;
+    margin: 0.8rem 0;
+  }
+
+  .scene6-letter-paper {
+    width: 95%;
+    max-height: 64vh;
+    padding: 1.25rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.2rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scene6-salutation {
+    font-size: clamp(1.35rem, 5.2vw, 1.75rem);
+    margin-bottom: 0.8rem;
+  }
+
+  .scene6-p {
+    font-size: clamp(1.08rem, 3.8vw, 1.35rem);
+    line-height: 1.6;
+    margin-bottom: 0.8rem;
+  }
+
+  .scene6-closing-box {
+    margin-top: 1.2rem;
+    padding-top: 0.8rem;
+  }
+
+  .scene6-closing-line {
+    font-size: clamp(1.05rem, 3.6vw, 1.25rem);
+  }
+
+  .scene6-final-sentence {
+    font-size: clamp(1.12rem, 4vw, 1.4rem);
+  }
+
+  .scene6-signature {
+    font-size: clamp(1.35rem, 5.2vw, 1.85rem);
+    margin-top: 0.5rem;
+  }
+
+  /* Scene 7 — Fake Ending Mobile */
+  .scene7-line {
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+    letter-spacing: 0.1em;
+  }
+
+  .scene7-the-end {
+    font-size: clamp(0.92rem, 3.8vw, 1.3rem);
+    letter-spacing: 0.3em;
+  }
+
+  /* Scene 8 — 3D Gift Mobile */
+  .scene8-gift-stage {
+    gap: 1.2rem;
+  }
+
+  .scene8-gift-3d {
+    width: clamp(170px, 48vw, 230px);
+    height: clamp(150px, 42vw, 200px);
+    margin: 0.6rem auto;
+  }
+
+  /* Scene 9 — Birthday Reveal Climax Mobile */
+  .scene9-container {
+    padding: 0 8px;
+  }
+
+  .scene9-content-stage {
+    gap: 0.25rem;
+    max-width: 100%;
+  }
+
+  .scene9-happy {
+    font-size: clamp(0.95rem, 3.8vw, 1.5rem);
+    letter-spacing: 0.22em;
+  }
+
+  .scene9-birthday {
+    font-size: clamp(1.6rem, 6.2vw, 2.7rem);
+    letter-spacing: 0.16em;
+  }
+
+  .scene9-name {
+    font-size: clamp(1.8rem, 7.5vw, 3.4rem);
+    letter-spacing: 0.08em;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    margin: 0.15rem 0;
+    line-height: 1.15;
+  }
+
+  .scene9-heart {
+    font-size: clamp(1.6rem, 5.8vw, 2.6rem);
+  }
+
+  .scene9-date-box {
+    margin-top: 0.5rem;
+    gap: 0.25rem;
+  }
+
+  .scene9-date {
+    font-size: 0.78rem;
+    letter-spacing: 0.2em;
+    padding: 0.22rem 0.8rem;
+  }
+
+  .scene9-tagline {
+    font-size: 0.75rem;
+  }
+
+  /* Scene 10 — Finale & Replay Mobile */
+  .scene10-container {
+    padding: 0 8px;
+  }
+
+  .scene10-opening-text {
+    font-size: clamp(1.3rem, 5.5vw, 2.1rem);
+    line-height: 1.35;
+  }
+
+  .scene10-content-stage {
+    gap: 0.6rem;
+    padding: 0 6px;
+    max-width: 100%;
+  }
+
+  .scene10-lines-container {
+    gap: 0.6rem;
+    max-width: 100%;
+  }
+
+  .scene10-line {
+    font-size: clamp(1.05rem, 4.2vw, 1.7rem);
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+  }
+
+  .scene10-personal-line {
+    font-size: clamp(1.3rem, 5vw, 2.1rem);
+    letter-spacing: 0.08em;
+    margin: 0.6rem 0 0.3rem 0;
+  }
+
+  .scene10-signature {
+    font-size: clamp(1.5rem, 5.8vw, 2.4rem);
+    margin-top: 0.3rem;
+  }
+
+  .scene10-credit-line {
+    font-size: clamp(1.0rem, 4vw, 1.5rem);
+    letter-spacing: 0.12em;
+  }
+
+  .scene10-credit-line.highlight {
+    font-size: clamp(1.4rem, 5.5vw, 2.3rem);
+    letter-spacing: 0.12em;
+  }
+
+  .scene10-replay-stage {
+    position: relative;
+    transform: translateY(0);
+    margin-top: 0.8rem;
+  }
+
+  .scene10-replay-stage.active {
+    transform: translateY(0);
+  }
+
+  .scene10-replay-btn,
+  .replay-experience-btn {
+    font-size: 0.88rem !important;
+    padding: 0.65rem 1.8rem !important;
+    letter-spacing: 0.16em !important;
+    min-height: 44px;
+  }
+
+  /* Bonus Scene Mobile */
+  .bonus-container {
+    padding: 0 6px;
+  }
+
+  .bonus-intro-line {
+    font-size: clamp(1.15rem, 4.8vw, 1.7rem);
+  }
+
+  .bonus-header-title {
+    font-size: clamp(0.92rem, 3.8vw, 1.25rem);
+    letter-spacing: 0.2em;
+  }
+
+  .bonus-viewport {
+    height: 38vh;
+    min-height: 180px;
+    max-height: 320px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .special-scene-viewport {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .scene2-viewport,
+  .scene3-viewport,
+  .scene4-viewport,
+  .scene5-viewport,
+  .bonus-viewport {
+    height: 34vh;
+    min-height: 160px;
+    max-height: 280px;
+  }
+
+  .scene8-gift-3d {
+    width: 170px;
+    height: 150px;
+  }
+}

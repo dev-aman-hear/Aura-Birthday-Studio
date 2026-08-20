@@ -156,6 +156,7 @@ export class RecipientPlayerView {
         const countdownView = new CountdownPlayerView({
           project: this.project,
           countdown: this.project.countdown,
+          viewMode: window.innerWidth < 768 ? 'mobile' : 'desktop',
           onComplete: () => {
             this.hasUnlockedCountdown = true;
             this.reRenderPlayer();
@@ -191,7 +192,7 @@ export class RecipientPlayerView {
 
       <!-- Main Full-Bleed Stage Viewport Area (Zero Padding, Full Viewport) -->
       <div class="recipient-scene-render-area" id="recSceneArea">
-        <div class="canvas-viewport-frame ratio-widescreen" id="recCanvasFrame">
+        <div class="canvas-viewport-frame recipient-viewport-frame" id="recCanvasFrame">
           <div class="story-canvas-viewport">
             <!-- Rendered by renderSceneContent -->
           </div>
@@ -548,10 +549,10 @@ export class RecipientPlayerView {
   }
 
   attachEvents(root) {
-    // 1. Begin Celebration Action (Dismisses Overlay)
+    // 1. Begin Celebration Action (Dismisses Overlay & Unlocks Audio for Mobile)
     const btnStart = root.querySelector('#btnStartCelebration');
     if (btnStart) {
-      btnStart.addEventListener('click', () => {
+      const handleStart = () => {
         this.hasWelcomed = true;
         const overlay = root.querySelector('#recWelcomeOverlay');
         if (overlay) {
@@ -559,18 +560,68 @@ export class RecipientPlayerView {
           setTimeout(() => overlay.remove(), 450);
         }
 
-        // Launch Celebration
+        // Launch Celebration Confetti
         const canvas = root.querySelector('#playerConfettiCanvas');
         if (canvas) {
           try { ConfettiEngine.launch(canvas); } catch (e) {}
         }
 
+        // Start audio from direct user touch gesture
         this.startBackgroundMusic();
         this.playScene(0);
-      });
+      };
+
+      btnStart.addEventListener('click', handleStart);
+      btnStart.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        handleStart();
+      }, { passive: false });
     }
 
-    // 2. Click Actions (In-scene buttons, Floating Nav, Audio Toggle, Fullscreen)
+    // 2. Mobile Touch Swipe Gestures for Fluid Mobile Scene Navigation
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    root.addEventListener('touchstart', (e) => {
+      if (this.isPausedForModal) return;
+      if (e.touches && e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+      }
+    }, { passive: true });
+
+    root.addEventListener('touchend', (e) => {
+      if (this.isPausedForModal) return;
+      if (e.changedTouches && e.changedTouches.length === 1) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        const timeDiff = Date.now() - touchStartTime;
+
+        // Check if swipe was intentional and primarily horizontal
+        const isHorizontalSwipe = Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.5 && timeDiff < 600;
+
+        if (isHorizontalSwipe) {
+          // Swipe Left -> Next Scene
+          if (diffX < 0 && this.currentSceneIndex < this.scenes.length - 1) {
+            this.playScene(this.currentSceneIndex + 1);
+          }
+          // Swipe Right -> Previous Scene
+          else if (diffX > 0 && this.currentSceneIndex > 0) {
+            const currentScene = this.scenes[this.currentSceneIndex] || {};
+            const isOutro = currentScene.template === 'special_emotional_finale' || currentScene.template === 'final_wish';
+            if (!isOutro) {
+              this.playScene(this.currentSceneIndex - 1);
+            }
+          }
+        }
+      }
+    }, { passive: true });
+
+    // 3. Click Actions (In-scene buttons, Floating Nav, Audio Toggle, Fullscreen)
     root.addEventListener('click', (e) => {
       // If modal is open, prevent scene navigation
       if (this.isPausedForModal) return;
@@ -596,6 +647,8 @@ export class RecipientPlayerView {
         if (this.bgAudio) {
           this.bgAudio.muted = this.isMuted;
           this.bgAudio.volume = this.isMuted ? 0 : 0.5;
+        } else if (!this.isMuted) {
+          this.startBackgroundMusic();
         }
         this.updateControls(root);
         return;
@@ -677,14 +730,14 @@ export class RecipientPlayerView {
       }
     });
 
-    // 3. Fullscreen Change Event for Dynamic Icon Toggle
+    // 4. Fullscreen Change Event for Dynamic Icon Toggle
     this.fullscreenChangeHandler = () => {
       this.updateControls(root);
     };
     document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
     document.addEventListener('webkitfullscreenchange', this.fullscreenChangeHandler);
 
-    // 4. Keyboard Shortcuts (Left/Right Arrows, Spacebar, M for Mute, F for Fullscreen)
+    // 5. Keyboard Shortcuts (Left/Right Arrows, Spacebar, M for Mute, F for Fullscreen)
     this.keydownHandler = (e) => {
       if (this.isPausedForModal) return;
 
@@ -703,6 +756,8 @@ export class RecipientPlayerView {
           if (this.bgAudio) {
             this.bgAudio.muted = this.isMuted;
             this.bgAudio.volume = this.isMuted ? 0 : 0.5;
+          } else if (!this.isMuted) {
+            this.startBackgroundMusic();
           }
           this.updateControls(root);
         }
