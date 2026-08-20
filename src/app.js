@@ -141,6 +141,7 @@ export class BirthdayStudioApp {
     const rawHash = window.location.hash || '#dashboard';
     // Normalize hash: handles #view/..., #/view/..., #wishwall/..., #/wishwall/..., etc.
     const cleanHash = rawHash.replace(/^#\/?/, '#');
+    const hash = cleanHash;
 
     // 1. PUBLIC RECIPIENT ROUTE (#view/<id> or #/view/<id>)
     if (cleanHash.startsWith('#view/')) {
@@ -276,8 +277,8 @@ export class BirthdayStudioApp {
 
     this.currentDashboardView = null;
 
-    if (hash.startsWith('#wizard')) {
-      const urlParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+    if (cleanHash.startsWith('#wizard')) {
+      const urlParams = new URLSearchParams(cleanHash.includes('?') ? cleanHash.split('?')[1] : '');
       const presetId = urlParams.get('preset') || 'birthday_wisher';
       const variant = urlParams.get('variant') || '3-scene';
 
@@ -294,8 +295,8 @@ export class BirthdayStudioApp {
       return;
     }
 
-    if (hash.startsWith('#editor')) {
-      const urlParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+    if (cleanHash.startsWith('#editor')) {
+      const urlParams = new URLSearchParams(cleanHash.includes('?') ? cleanHash.split('?')[1] : '');
       const projectId = urlParams.get('project');
       await this.loadProject(projectId);
       await this.refreshStateAndRenderEditor();
