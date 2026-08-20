@@ -48,6 +48,21 @@ export class ShareService {
   }
 
   /**
+   * Copy a share URL directly to clipboard
+   */
+  static async copyShareLink(url) {
+    if (!url) return false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        return true;
+      } catch (e) {}
+    }
+    return false;
+  }
+
+
+  /**
    * Generates a deterministic SVG QR code string encoding the recipient URL
    */
   static generateQrSvg(url) {

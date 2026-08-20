@@ -24,15 +24,19 @@ export class PublishSuccessView {
 
     const shareUrl = ShareService.getShareUrl(this.publication.id);
     const qrSvgHtml = ShareService.generateQrSvg(shareUrl);
-    const recipName = this.publication.snapshot?.recipient?.name || 'Someone Special';
-    const expireDateStr = new Date(this.publication.expiresAt).toLocaleDateString(undefined, {
+    const isPermanent = !this.publication.expiresAt;
+    const expireDateStr = isPermanent ? 'Never (Permanent)' : new Date(this.publication.expiresAt).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
-    const durationDays = this.publication.durationDays || Math.max(1, Math.round((this.publication.expiresAt - this.publication.publishedAt) / (24 * 60 * 60 * 1000)));
+    const durationDays = this.publication.durationDays || (this.publication.expiresAt ? Math.max(1, Math.round((this.publication.expiresAt - this.publication.publishedAt) / (24 * 60 * 60 * 1000))) : null);
+
+    const statusText = isPermanent
+      ? `Created for <strong>${recipName}</strong> • ✨ <strong>Permanent Link (Never expires)</strong>`
+      : `Created for <strong>${recipName}</strong> • Active for <strong>${durationDays} Day${durationDays === 1 ? '' : 's'}</strong> (Expires: ${expireDateStr})`;
 
     modal.innerHTML = `
       <div class="wizard-modal text-center" style="max-width:540px; padding:28px; position:relative;">
@@ -40,7 +44,7 @@ export class PublishSuccessView {
         <div style="font-size:3rem; margin-bottom:4px;">🎉</div>
         <h2 style="font-size:1.6rem; font-weight:900;">Your Celebration is Live!</h2>
         <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">
-          Created for <strong>${recipName}</strong> • Active for <strong>${durationDays} Day${durationDays === 1 ? '' : 's'}</strong> (Expires: ${expireDateStr})
+          ${statusText}
         </p>
 
         <div style="display:flex; justify-content:center; margin:16px 0;">

@@ -6,6 +6,8 @@
 import { publishedProjectRepository } from '../services/PublishedProjectRepository.js';
 import { wishRepository } from '../services/WishRepository.js';
 import { ExpiredProjectView } from './ExpiredProjectView.js';
+import { RecipientErrorView } from './RecipientErrorView.js';
+import { CelebrationUnavailableView } from './CelebrationUnavailableView.js';
 import { WishSubmissionModal } from './WishSubmissionModal.js';
 
 export class WishWallView {
@@ -17,23 +19,45 @@ export class WishWallView {
   }
 
   async render() {
-    // STEP 1: TEST H Security Gate - Fetch metadata ONLY
-    this.publicationMeta = await publishedProjectRepository.getPublicationMetadata(this.publicationId);
+    // STEP 1: Fetch metadata ONLY
+    try {
+      this.publicationMeta = await publishedProjectRepository.getPublicationMetadata(this.publicationId);
+    } catch (err) {
+      const unavailView = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection.');
+      return unavailView.render();
+    }
 
-    // STEP 2: Validate active status & expiration BEFORE loading snapshot or wishes!
-    if (!this.publicationMeta || this.publicationMeta.status !== 'active' || Date.now() >= this.publicationMeta.expiresAt) {
+    // STEP 2: Differentiated error checks
+    if (!this.publicationMeta || this.publicationMeta.exists === false || this.publicationMeta.status === 'not_found') {
+      const errView = new RecipientErrorView('Celebration not found. The link may be incorrect, incomplete, or deleted.');
+      return errView.render();
+    }
+
+    if (this.publicationMeta.isPublic === false) {
+      const errView = new RecipientErrorView('This celebration has been set to private by its creator.');
+      return errView.render();
+    }
+
+    if (this.publicationMeta.isExpired || this.publicationMeta.status === 'expired') {
       const expiredView = new ExpiredProjectView(this.publicationMeta);
       return expiredView.render();
     }
 
-    // STEP 3: ONLY IF ACTIVE, load snapshot payload & approved wishes
-    this.publication = await publishedProjectRepository.getPublishedSnapshot(this.publicationId);
+    // STEP 3: Load snapshot payload & approved wishes
+    try {
+      this.publication = await publishedProjectRepository.getPublishedSnapshot(this.publicationId);
+    } catch (err) {
+      const unavailView = new CelebrationUnavailableView('Unable to load celebration data. Please check your internet connection.');
+      return unavailView.render();
+    }
+
     if (!this.publication || !this.publication.snapshot) {
-      const expiredView = new ExpiredProjectView(this.publicationMeta);
-      return expiredView.render();
+      const errView = new RecipientErrorView('Celebration data is incomplete or unavailable.');
+      return errView.render();
     }
 
     this.wishes = await wishRepository.getApprovedWishes(this.publication.projectId);
+
 
     const root = document.createElement('div');
     root.className = 'wish-wall-scene-container theme-wall-glassmorphic animate-fade';

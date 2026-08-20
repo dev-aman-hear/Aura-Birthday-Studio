@@ -1,6 +1,6 @@
 /**
  * Birthday Studio - Publish Confirmation View
- * Pre-Publication Summary Modal with Link Expiration Duration Selector (1, 3, 5, 7 Days)
+ * Pre-Publication Summary Modal with Link Expiration Duration Selector (Permanent or 1, 3, 5, 7 Days)
  */
 
 import { Accessibility } from '../utils/Accessibility.js';
@@ -10,10 +10,13 @@ export class PublishConfirmationView {
   constructor(project, onConfirmPublish = (() => {})) {
     this.project = project;
     this.onConfirmPublish = onConfirmPublish;
-    this.selectedDays = DEFAULT_LINK_DURATION_DAYS;
+    this.selectedDays = DEFAULT_LINK_DURATION_DAYS; // null by default (permanent)
   }
 
   getExpirationDateString(days) {
+    if (!days || days === 'permanent') {
+      return 'Never (Permanent Link)';
+    }
     const expireTime = Date.now() + (days * 24 * 60 * 60 * 1000);
     return new Date(expireTime).toLocaleDateString(undefined, {
       month: 'short',
@@ -58,27 +61,28 @@ export class PublishConfirmationView {
           <div>📷 <strong>Media Assets:</strong> ${mediaCount} memory files attached</div>
         </div>
 
-        <!-- Duration Selection Dropdown (1, 3, 5, 7 Days) -->
+        <!-- Duration Selection Dropdown -->
         <div class="form-group" style="margin-bottom:18px;">
           <label style="font-weight:700; font-size:0.84rem; color:var(--text); margin-bottom:6px; display:block;">
             How long should this link remain active?
           </label>
           
           <select class="form-input" id="selPublishDuration" style="width:100%; font-size:0.92rem; padding:10px 12px; border-radius:8px; background:#1b1730; color:#fff; border:1px solid rgba(124, 58, 237, 0.4); cursor:pointer;">
-            <option value="1">1 Day</option>
-            <option value="3" selected>3 Days (Recommended)</option>
+            <option value="permanent" selected>✨ Permanent Link (Never expires - Recommended)</option>
+            <option value="7">7 Days</option>
             <option value="5">5 Days</option>
-            <option value="7">7 Days (Maximum allowed)</option>
+            <option value="3">3 Days</option>
+            <option value="1">1 Day</option>
           </select>
         </div>
 
         <!-- Dynamic Live Expiration Date Display -->
         <div id="publishExpirationNotice" style="background:rgba(124, 58, 237, 0.12); border:1px solid rgba(124, 58, 237, 0.3); padding:12px 14px; border-radius:8px; margin-bottom:22px;">
-          <div style="font-size:0.84rem; font-weight:700; color:#c4b5fd; display:flex; align-items:center; gap:6px;">
-            <span>⏳</span> <span>Link will expire after the selected duration.</span>
+          <div style="font-size:0.84rem; font-weight:700; color:#c4b5fd; display:flex; align-items:center; gap:6px;" id="lblDynamicExpireHeader">
+            <span>✨</span> <span>Permanent Celebration Link</span>
           </div>
           <div style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;" id="lblDynamicExpireDate">
-            New expiration: <strong>${this.getExpirationDateString(this.selectedDays)}</strong>
+            Link status: <strong>Never expires (Publicly accessible from any device)</strong>
           </div>
         </div>
 
@@ -101,13 +105,22 @@ export class PublishConfirmationView {
 
   attachEvents(modal) {
     const sel = modal.querySelector('#selPublishDuration');
+    const lblHeader = modal.querySelector('#lblDynamicExpireHeader');
     const lblDate = modal.querySelector('#lblDynamicExpireDate');
 
     if (sel && lblDate) {
       sel.addEventListener('change', (e) => {
-        const days = Math.min(MAX_LINK_DURATION_DAYS, Math.max(1, parseInt(e.target.value, 10) || 3));
-        this.selectedDays = days;
-        lblDate.innerHTML = `New expiration: <strong>${this.getExpirationDateString(days)}</strong>`;
+        const val = e.target.value;
+        if (val === 'permanent') {
+          this.selectedDays = null;
+          if (lblHeader) lblHeader.innerHTML = `<span>✨</span> <span>Permanent Celebration Link</span>`;
+          lblDate.innerHTML = `Link status: <strong>Never expires (Publicly accessible from any device)</strong>`;
+        } else {
+          const days = Math.min(MAX_LINK_DURATION_DAYS, Math.max(1, parseInt(val, 10) || 3));
+          this.selectedDays = days;
+          if (lblHeader) lblHeader.innerHTML = `<span>⏳</span> <span>Link will expire after the selected duration.</span>`;
+          lblDate.innerHTML = `New expiration: <strong>${this.getExpirationDateString(days)}</strong>`;
+        }
       });
     }
 
@@ -125,3 +138,4 @@ export class PublishConfirmationView {
     });
   }
 }
+

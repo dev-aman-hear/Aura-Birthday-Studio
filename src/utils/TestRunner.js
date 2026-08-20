@@ -100,10 +100,11 @@ export class TestRunner {
 
     try {
       // TEST A: Publish & Expiration Verification
-      const pubA = await publishedProjectRepository.publishProject(project);
+      const pubA = await publishedProjectRepository.publishProject(project, 7);
       const expectedExpires = pubA.publishedAt + (7 * 24 * 60 * 60 * 1000);
       const passA = pubA.status === 'active' && Math.abs(pubA.expiresAt - expectedExpires) < 100;
       results.push({ test: 'TEST A (Publish & 7-Day Expiration)', pass: passA, detail: `pubId: ${pubA.id}, expiresAt matches 7 days: ${passA}` });
+
 
       // TEST B: Active Recipient View Verification
       const recipientViewB = new RecipientPlayerView(pubA.id);
@@ -556,9 +557,10 @@ export class TestRunner {
       results.push({ test: 'S31 — TEST D expired Wish Wall rejection unchanged', pass: passS31, detail: 'Expired publication rejection active' });
 
       // S32: 7-day expiration unchanged
-      const pubS32 = await publishedProjectRepository.publishProject(project);
+      const pubS32 = await publishedProjectRepository.publishProject(project, 7);
       const passS32 = pubS32.expiresAt === pubS32.publishedAt + (7 * 24 * 60 * 60 * 1000);
       results.push({ test: 'S32 — 7-day expiration unchanged', pass: passS32, detail: 'Exact 7-day calculation verified' });
+
 
       // S33: No silent button failures
       const passS33 = true;
@@ -893,9 +895,33 @@ export class TestRunner {
       const passST5 = JSON.stringify(project.scenes) === origScenesJson;
       results.push({ test: 'ST5 — Read-Only Style Preview Isolation', pass: passST5, detail: 'Underlying project scenes unmutated by style selection' });
 
+      // === SUPABASE REMOTE PUBLISHING TESTS (SP1 - SP4) ===
+      // SP1: Permanent publication creation (null expiration)
+      const permPub = await publishedProjectRepository.publishProject(project, 'permanent');
+      const passSP1 = permPub.expiresAt === null && permPub.isExpired() === false && permPub.status === 'active';
+      results.push({ test: 'SP1 — Permanent Publication (Null Expiration)', pass: passSP1, detail: `expiresAt: ${permPub.expiresAt}, isExpired: ${permPub.isExpired()}` });
+
+      // SP2: Invalid publication ID produces recipient error, NOT expired root
+      const invalidView = new RecipientPlayerView('pub_invalid_nonexistent_token_xyz');
+      const invalidElem = await invalidView.render();
+      const passSP2 = invalidElem.id === 'recipientErrorRoot' && invalidElem.id !== 'expiredProjectRoot';
+      results.push({ test: 'SP2 — Differentiated Error for Nonexistent Publication', pass: passSP2, detail: `Rendered element ID: ${invalidElem.id}` });
+
+      // SP3: Expired publication correctly renders Expired view
+      const testExpiredMeta = { id: 'pub_expired_unit_test', status: 'expired', expiresAt: Date.now() - 10000, isExpired: true };
+      const expView = new ExpiredProjectView(testExpiredMeta);
+      const expElem = expView.render();
+      const passSP3 = expElem.id === 'expiredProjectRoot';
+      results.push({ test: 'SP3 — Expired publication contract', pass: passSP3, detail: 'Rendered expiredProjectRoot' });
+
+      // SP4: Copy Share Link helper verification
+      const passSP4 = typeof ShareService.copyShareLink === 'function';
+      results.push({ test: 'SP4 — ShareService copyShareLink helper', pass: passSP4, detail: 'copyShareLink helper verified' });
+
     } catch (globalErr) {
       console.error('Test Runner Error:', globalErr);
     }
+
 
 
 

@@ -598,12 +598,13 @@ export class DashboardView {
   }
 
   renderDesktopTableRow(pub) {
-    const isExpired = Date.now() >= (pub.expiresAt || 0);
+    const isExpired = pub.expiresAt ? Date.now() >= pub.expiresAt : false;
     const shareUrl = `${window.location.origin}${window.location.pathname}#view/${pub.id}`;
-    const daysLeft = Math.max(0, Math.ceil(((pub.expiresAt || 0) - Date.now()) / (1000 * 60 * 60 * 24)));
+    const isPermanent = !pub.expiresAt;
+    const daysLeft = pub.expiresAt ? Math.max(0, Math.ceil((pub.expiresAt - Date.now()) / (1000 * 60 * 60 * 24))) : null;
     const recipient = pub.snapshot?.recipient?.name || pub.projectSnapshot?.recipient?.name || 'Friend';
     const occasion = pub.snapshot?.occasion || pub.projectSnapshot?.occasion || 'Celebration';
-    const expireDateStr = pub.expiresAt ? new Date(pub.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown';
+    const expireDateStr = pub.expiresAt ? new Date(pub.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never (Permanent)';
 
     return `
       <tr class="link-row ${isExpired ? 'row-expired' : ''}">
@@ -620,6 +621,8 @@ export class DashboardView {
         <td class="col-link-status">
           ${isExpired ? `
             <span class="badge-status-pill status-expired" title="Expired on ${expireDateStr}">● Expired</span>
+          ` : isPermanent ? `
+            <span class="badge-status-pill status-active" title="Permanent Link (Never expires)" style="background:rgba(44,182,125,0.2); color:#2cb67d;">● Permanent</span>
           ` : `
             <span class="badge-status-pill status-active" title="Expires: ${expireDateStr} (${daysLeft}d left)">● Active (${daysLeft}d)</span>
           `}
@@ -644,12 +647,13 @@ export class DashboardView {
   }
 
   renderMobileLinkCard(pub) {
-    const isExpired = Date.now() >= (pub.expiresAt || 0);
+    const isExpired = pub.expiresAt ? Date.now() >= pub.expiresAt : false;
+    const isPermanent = !pub.expiresAt;
     const shareUrl = `${window.location.origin}${window.location.pathname}#view/${pub.id}`;
-    const daysLeft = Math.max(0, Math.ceil(((pub.expiresAt || 0) - Date.now()) / (1000 * 60 * 60 * 24)));
+    const daysLeft = pub.expiresAt ? Math.max(0, Math.ceil((pub.expiresAt - Date.now()) / (1000 * 60 * 60 * 24))) : null;
     const recipient = pub.snapshot?.recipient?.name || pub.projectSnapshot?.recipient?.name || 'Friend';
     const occasion = pub.snapshot?.occasion || pub.projectSnapshot?.occasion || 'Celebration';
-    const expireDateStr = pub.expiresAt ? new Date(pub.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown';
+    const expireDateStr = pub.expiresAt ? new Date(pub.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Permanent';
 
     return `
       <div class="mobile-link-card ${isExpired ? 'card-expired' : ''}">
@@ -657,9 +661,9 @@ export class DashboardView {
           <h4 class="mobile-link-title">${recipient}'s ${occasion}</h4>
           <div class="mobile-link-meta">
             <span class="badge-status-pill ${isExpired ? 'status-expired' : 'status-active'}">
-              ${isExpired ? '● Expired' : `● Active (${daysLeft}d left)`}
+              ${isExpired ? '● Expired' : isPermanent ? '● Permanent' : `● Active (${daysLeft}d left)`}
             </span>
-            <span style="font-size:0.75rem; color:var(--text-muted);">Exp: ${expireDateStr}</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">${isPermanent ? '✨ Permanent' : `Exp: ${expireDateStr}`}</span>
           </div>
         </div>
 

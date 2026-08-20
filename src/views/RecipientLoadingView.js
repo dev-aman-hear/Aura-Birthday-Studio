@@ -4,6 +4,10 @@
  */
 
 export class RecipientLoadingView {
+  constructor(message = 'Loading your celebration...') {
+    this.message = message;
+  }
+
   render() {
     const root = document.createElement('div');
     root.className = 'recipient-loading-screen animate-fade';
@@ -12,14 +16,15 @@ export class RecipientLoadingView {
     root.style.flexDirection = 'column';
     root.style.justifyContent = 'center';
     root.style.alignItems = 'center';
-    root.style.background = 'var(--bg-dark)';
+    root.style.background = 'var(--bg-dark, #0f0e17)';
     root.style.color = '#fff';
 
     root.innerHTML = `
       <div style="font-size:3rem; margin-bottom:12px; animation:spin 1.2s linear infinite;">🎂</div>
-      <div style="font-weight:700; font-size:1.1rem; color:var(--accent);">Preparing your celebration experience...</div>
+      <div style="font-weight:700; font-size:1.1rem; color:var(--accent, #7f5af0);">${this.message}</div>
     `;
 
     return root;
   }
 }
+

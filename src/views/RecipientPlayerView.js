@@ -10,6 +10,8 @@ import { publishedProjectRepository } from '../services/PublishedProjectReposito
 import { assetRepository } from '../services/AssetRepository.js';
 import { wishRepository } from '../services/WishRepository.js';
 import { ExpiredProjectView } from './ExpiredProjectView.js';
+import { RecipientErrorView } from './RecipientErrorView.js';
+import { CelebrationUnavailableView } from './CelebrationUnavailableView.js';
 import { CountdownPlayerView } from './CountdownPlayerView.js';
 import { CountdownService } from '../services/CountdownService.js';
 import { TemplateRegistry } from '../templates/TemplateRegistry.js';
@@ -44,20 +46,45 @@ export class RecipientPlayerView {
 
   async render() {
     // STEP 1: Metadata Pre-Flight Check
-    this.publicationMeta = await publishedProjectRepository.getPublicationMetadata(this.publicationId);
+    try {
+      this.publicationMeta = await publishedProjectRepository.getPublicationMetadata(this.publicationId);
+    } catch (err) {
+      console.error('[RecipientPlayer] Error fetching metadata:', err);
+      const unavailView = new CelebrationUnavailableView('Unable to connect to celebration database. Please check your internet connection.');
+      return unavailView.render();
+    }
 
-    // STEP 2: Security Gate - Validate publication active state & 7-day expiration
-    if (!this.publicationMeta || this.publicationMeta.status !== 'active' || Date.now() >= this.publicationMeta.expiresAt) {
+    // STEP 2: Differentiated Error & Security Gating
+    if (!this.publicationMeta || this.publicationMeta.exists === false || this.publicationMeta.status === 'not_found') {
+      const errView = new RecipientErrorView('Celebration not found. The link may be incorrect, incomplete, or deleted.');
+      return errView.render();
+    }
+
+    if (this.publicationMeta.isPublic === false) {
+      const errView = new RecipientErrorView('This celebration has been set to private by its creator.');
+      return errView.render();
+    }
+
+    // Only show expired if it has a defined expiration date in the past
+    if (this.publicationMeta.isExpired || this.publicationMeta.status === 'expired') {
       const expiredView = new ExpiredProjectView(this.publicationMeta);
       return expiredView.render();
     }
 
     // STEP 3: Load Immutable Published Snapshot Payload
-    this.publication = await publishedProjectRepository.getPublishedSnapshot(this.publicationId);
-    if (!this.publication || !this.publication.snapshot) {
-      const expiredView = new ExpiredProjectView(this.publicationMeta);
-      return expiredView.render();
+    try {
+      this.publication = await publishedProjectRepository.getPublishedSnapshot(this.publicationId);
+    } catch (err) {
+      console.error('[RecipientPlayer] Error loading snapshot:', err);
+      const unavailView = new CelebrationUnavailableView('Unable to load celebration data. Please check your internet connection.');
+      return unavailView.render();
     }
+
+    if (!this.publication || !this.publication.snapshot) {
+      const errView = new RecipientErrorView('Celebration data is incomplete or unavailable.');
+      return errView.render();
+    }
+
 
     this.project = this.publication.snapshot;
     this.scenes = [...(this.project.scenes || [])].sort((a, b) => (a.order || 0) - (b.order || 0));

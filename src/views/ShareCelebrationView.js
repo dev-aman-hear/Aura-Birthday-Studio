@@ -24,7 +24,9 @@ export class ShareCelebrationView {
     const shareUrl = ShareService.getShareUrl(this.publication.id);
     const qrSvgHtml = ShareService.generateQrSvg(shareUrl);
     const recipName = this.publication.snapshot?.recipient?.name || 'Someone Special';
-    const expiresDate = new Date(this.publication.expiresAt).toLocaleDateString();
+    const expiresText = this.publication.expiresAt
+      ? `Expires on ${new Date(this.publication.expiresAt).toLocaleDateString()}`
+      : `✨ Permanent Link`;
 
     modal.innerHTML = `
       <div class="wizard-modal" style="max-width:540px; padding:24px; text-align:center;">
@@ -34,7 +36,7 @@ export class ShareCelebrationView {
         </div>
 
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
-          Sharing live publication for <strong>${recipName}</strong> • Expires on ${expiresDate}
+          Sharing live celebration for <strong>${recipName}</strong> • ${expiresText}
         </p>
 
         <div style="display:flex; justify-content:center; margin-bottom:16px;">
