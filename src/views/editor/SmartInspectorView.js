@@ -16,19 +16,27 @@ import { resolveGiftContent } from '../../animations/SpecialAnimationEngine.js';
 
 export class SmartInspectorView {
   constructor(options = {}) {
-    this.project = options.project || {};
-    this.activeSceneId = options.activeSceneId || options.selectedSceneId || options.scene?.id || null;
-    this.selectedSceneId = this.activeSceneId;
-    this.selectedElementSceneId = options.selectedElementSceneId || this.activeSceneId;
-    this.scene = options.scene || null;
-    this.allAssets = options.allAssets || [];
+    this.project = options.project || { scenes: [] };
+    this.activeSceneId = options.activeSceneId || (options.scene && options.scene.id) || null;
     this.selectedElementId = options.selectedElementId || null;
+    this.selectedElementSceneId = options.selectedElementSceneId || (this.selectedElementId ? this.activeSceneId : null);
+    this.scene = (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || (options.scene && options.scene.id === this.activeSceneId ? options.scene : null);
+    this.allAssets = options.allAssets || [];
     this.onProjectModified = options.onProjectModified || (() => {});
     this.onSelectElement = options.onSelectElement || (() => {});
     this.onOpenAssetPicker = options.onOpenAssetPicker || (() => {});
     this.onDeleteElement = options.onDeleteElement || (() => {});
     this.onOpenModeration = options.onOpenModeration || (() => {});
     this.onPreviewWishWall = options.onPreviewWishWall || (() => {});
+    this.onQuickAddElement = options.onQuickAddElement || (() => {});
+  }
+
+  get selectedSceneId() {
+    return this.activeSceneId;
+  }
+
+  set selectedSceneId(val) {
+    this.activeSceneId = val;
   }
 
   resolveMemoryPhotoInfo(item) {
@@ -218,61 +226,60 @@ export class SmartInspectorView {
     this.selectedElementId = id;
   }
 
-  isLayoutLocked() {
-    return this.scene?.lockedLayout !== false;
+  isLayoutLocked(scene) {
+    const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
+    return sc?.lockedLayout !== false;
   }
 
   resolveSelectedElement() {
-    let targetScene = null;
-    const targetSceneId = this.activeSceneId || this.selectedSceneId;
-    if (targetSceneId && this.project?.scenes?.length) {
-      targetScene = this.project.scenes.find(s => s.id === targetSceneId) || null;
-    }
-    if (!targetScene && this.scene && this.project?.scenes?.length) {
-      targetScene = this.project.scenes.find(s => s.id === this.scene.id) || null;
-    }
-    if (!targetScene) {
-      targetScene = this.scene || null;
-    }
-
-    this.scene = targetScene;
-
-    if (!targetScene || !this.selectedElementId) {
-      return { scene: targetScene, element: null };
-    }
-
-    const elementSceneId = this.selectedElementSceneId || targetSceneId;
-    const elScene = (elementSceneId && this.project?.scenes?.find(s => s.id === elementSceneId)) || targetScene;
-    const elements = this.getElementsList(elScene);
-    let activeEl = elements.find(e => e.id === this.selectedElementId) || null;
-    if (!activeEl && targetScene) {
-      const s = targetScene.settings || {};
-      const slots = targetScene.slots || {};
-      if (this.selectedElementId === 'photo' || this.selectedElementId === 'reveal-photo' || this.selectedElementId === 'hero_image' || this.selectedElementId === 'hero_photo' || this.selectedElementId?.startsWith('gallery-img') || this.selectedElementId?.startsWith('collage-item')) {
-        activeEl = {
-          id: this.selectedElementId,
-          type: 'image',
-          name: 'Scene Photo',
-          assetId: s.heroPhotoAssetId || s.photoAssetId || slots.reveal_photo || slots.hero_image,
-          url: s.revealPhotoUrl || s.heroPhotoUrl || s.photoUrl || '',
-          fit: s.imageFit || 'cover'
-        };
-      } else if (this.selectedElementId === 'video' || this.selectedElementId === 'main_video') {
-        activeEl = {
-          id: this.selectedElementId,
-          type: 'video',
-          name: 'Scene Video',
-          assetId: s.videoAssetId || slots.main_video || slots.video,
-          url: s.videoUrl || '',
-          autoplay: s.autoplay !== false
-        };
+    if (this.selectedElementId) {
+      const elementSceneId = this.selectedElementSceneId;
+      const scene = (elementSceneId && this.project?.scenes?.find(s => s.id === elementSceneId)) || null;
+      if (scene) {
+        const elements = this.getElementsList(scene);
+        let element = elements.find(e => e.id === this.selectedElementId) || null;
+        if (!element) {
+          const s = scene.settings || {};
+          const slots = scene.slots || {};
+          if (this.selectedElementId === 'photo' || this.selectedElementId === 'reveal-photo' || this.selectedElementId === 'hero_image' || this.selectedElementId === 'hero_photo' || this.selectedElementId?.startsWith('gallery-img') || this.selectedElementId?.startsWith('collage-item')) {
+            element = {
+              id: this.selectedElementId,
+              type: 'image',
+              name: 'Scene Photo',
+              assetId: s.heroPhotoAssetId || s.photoAssetId || slots.reveal_photo || slots.hero_image,
+              url: s.revealPhotoUrl || s.heroPhotoUrl || s.photoUrl || '',
+              fit: s.imageFit || 'cover'
+            };
+          } else if (this.selectedElementId === 'video' || this.selectedElementId === 'main_video') {
+            element = {
+              id: this.selectedElementId,
+              type: 'video',
+              name: 'Scene Video',
+              assetId: s.videoAssetId || slots.main_video || slots.video,
+              url: s.videoUrl || '',
+              autoplay: s.autoplay !== false
+            };
+          }
+        }
+        if (element) {
+          return { scene, element };
+        }
       }
     }
-    return { scene: targetScene, element: activeEl };
+
+    // No element selected or not found: resolve active scene for Scene Settings
+    let activeScene = null;
+    if (this.activeSceneId && this.project?.scenes?.length) {
+      activeScene = this.project.scenes.find(s => s.id === this.activeSceneId) || null;
+    } else if (this.scene && this.scene.id === this.activeSceneId) {
+      activeScene = this.scene;
+    }
+
+    return { scene: activeScene, element: null };
   }
 
-  getElementsList(targetScene = this.scene) {
-    const sc = targetScene || this.scene;
+  getElementsList(targetScene) {
+    const sc = targetScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || (this.scene && this.scene.id === this.activeSceneId ? this.scene : null);
     if (!sc) return [];
     if (Array.isArray(sc.elements) && sc.elements.length > 0) {
       return sc.elements;
@@ -292,6 +299,7 @@ export class SmartInspectorView {
     inspector.id = 'modernSmartInspector';
 
     const { scene, element: activeEl } = this.resolveSelectedElement();
+    this.currentRenderScene = scene;
 
     if (!scene) {
       inspector.innerHTML = `
@@ -308,10 +316,10 @@ export class SmartInspectorView {
       <!-- Header -->
       <div class="inspector-header">
         <div class="inspector-title">
-          <span>${this.getHeaderIcon(activeEl)}</span>
-          <span id="inspectorTitleLabel">${this.getHeaderTitle(activeEl)}</span>
+          <span>${this.getHeaderIcon(activeEl, scene)}</span>
+          <span id="inspectorTitleLabel">${this.getHeaderTitle(activeEl, scene)}</span>
         </div>
-        ${(activeEl && !this.isLayoutLocked()) ? `
+        ${(activeEl && !this.isLayoutLocked(scene)) ? `
           <button class="btn btn-ghost btn-xs btn-danger" id="btnInspectorDeleteElement" title="Delete Element">
             🗑️ Delete
           </button>
@@ -327,8 +335,8 @@ export class SmartInspectorView {
       <!-- Inspector Body -->
       <div class="inspector-body" id="inspectorBodyContainer">
         ${activeEl ? `
-          ${this.renderActiveElementControls(activeEl)}
-          ${this.renderSceneTimingSection()}
+          ${this.renderActiveElementControls(activeEl, scene)}
+          ${this.renderSceneTimingSection(scene)}
         ` : this.renderSceneDefaultControls(scene)}
       </div>
     `;
@@ -345,41 +353,42 @@ export class SmartInspectorView {
       assetsMount.appendChild(panel.render());
     }
 
-    this.attachEvents(inspector, activeEl);
+    this.attachEvents(inspector, activeEl, scene);
     return inspector;
   }
 
-  getSceneKind(scene = this.scene) {
-    if (!scene) return 'text';
-    const t = (scene.template || '').toLowerCase();
+  getSceneKind(scene = this.currentRenderScene || this.scene) {
+    const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
+    if (!sc) return 'text';
+    const t = (sc.template || '').toLowerCase();
     if (t === 'basic_celebration' || t === 'basic' || t === 'text') return 'text';
     if (t === 'wish_wall' || t === 'wish-wall') return 'wish_wall';
     if (t === 'video_showcase' || t === 'video') return 'video';
     if (t === 'photo_gallery' || t === 'collage' || t === 'memory_timeline') return 'gallery';
     if (t === 'fullscreen_photo') return 'image';
     if (t === 'hero') {
-      const hasPhoto = scene.slots?.hero_image || scene.slots?.hero_photo || scene.settings?.heroPhotoAssetId || scene.settings?.photoAssetId || (Array.isArray(scene.assetIds) && scene.assetIds.length > 0 && scene.name !== 'New Scene');
+      const hasPhoto = sc.slots?.hero_image || sc.slots?.hero_photo || sc.settings?.heroPhotoAssetId || sc.settings?.photoAssetId || (Array.isArray(sc.assetIds) && sc.assetIds.length > 0 && sc.name !== 'New Scene');
       return hasPhoto ? 'image' : 'text';
     }
     if (t.startsWith('special_')) return 'special';
     if (t === 'message' || t === 'reveal' || t === 'final_wish' || t === 'quote') return 'text';
     if (t === 'universal' || t === 'blank' || t === 'custom') {
-      const elements = scene.elements || scene.textElements || [];
+      const elements = sc.elements || sc.textElements || [];
       if (elements.some(e => e.type === 'video')) return 'video';
       if (elements.some(e => e.type === 'image' || e.type === 'photo')) return 'image';
       return 'text';
     }
 
     // Check elements or slots fallback
-    const elements = scene.elements || scene.textElements || [];
-    if (elements.some(e => e.type === 'video') || scene.slots?.main_video || scene.slots?.video) return 'video';
-    if (elements.some(e => e.type === 'image' || e.type === 'photo') || (scene.slots?.hero_image && scene.name !== 'New Scene') || scene.slots?.primaryPhoto) return 'image';
+    const elements = sc.elements || sc.textElements || [];
+    if (elements.some(e => e.type === 'video') || sc.slots?.main_video || sc.slots?.video) return 'video';
+    if (elements.some(e => e.type === 'image' || e.type === 'photo') || (sc.slots?.hero_image && sc.name !== 'New Scene') || sc.slots?.primaryPhoto) return 'image';
     return 'text';
   }
 
-  getHeaderIcon(activeEl) {
+  getHeaderIcon(activeEl, scene) {
     if (!activeEl) {
-      const kind = this.getSceneKind();
+      const kind = this.getSceneKind(scene);
       switch (kind) {
         case 'text': return '🔤';
         case 'image': return '🖼️';
@@ -400,9 +409,9 @@ export class SmartInspectorView {
     return '✨';
   }
 
-  getHeaderTitle(activeEl) {
+  getHeaderTitle(activeEl, scene) {
     if (!activeEl) {
-      const kind = this.getSceneKind();
+      const kind = this.getSceneKind(scene);
       switch (kind) {
         case 'text': return 'Scene Settings';
         case 'image': return 'Photo Scene Settings';
@@ -418,20 +427,21 @@ export class SmartInspectorView {
     return `${t} Properties`;
   }
 
-  renderActiveElementControls(el) {
+  renderActiveElementControls(el, scene) {
+    const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
     const t = (el.type || 'text').toLowerCase();
 
-    if (t === 'text') return this.renderTextControls(el);
-    if (t === 'image' || t === 'photo') return this.renderImageControls(el);
-    if (t === 'video') return this.renderVideoControls(el);
-    if (t === 'countdown') return this.renderCountdownControls(el);
-    if (t === 'shape') return this.renderShapeControls(el);
+    if (t === 'text') return this.renderTextControls(el, sc);
+    if (t === 'image' || t === 'photo') return this.renderImageControls(el, sc);
+    if (t === 'video') return this.renderVideoControls(el, sc);
+    if (t === 'countdown') return this.renderCountdownControls(el, sc);
+    if (t === 'shape') return this.renderShapeControls(el, sc);
 
-    return this.renderGenericControls(el);
+    return this.renderGenericControls(el, sc);
   }
 
-  renderTextControls(el) {
-    const isLocked = this.isLayoutLocked();
+  renderTextControls(el, scene) {
+    const isLocked = this.isLayoutLocked(scene);
 
     return `
       ${isLocked ? `
@@ -1602,33 +1612,35 @@ export class SmartInspectorView {
     return slots;
   }
 
-  renderSceneDefaultControls() {
-    const kind = this.getSceneKind();
+  renderSceneDefaultControls(scene = this.currentRenderScene) {
+    const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
+    const kind = this.getSceneKind(sc);
     switch (kind) {
       case 'text':
-        return this.renderContextualTextSceneControls();
+        return this.renderContextualTextSceneControls(sc);
       case 'image':
-        return this.renderContextualImageSceneControls();
+        return this.renderContextualImageSceneControls(sc);
       case 'video':
-        return this.renderContextualVideoSceneControls();
+        return this.renderContextualVideoSceneControls(sc);
       case 'gallery':
-        return this.renderContextualGallerySceneControls();
+        return this.renderContextualGallerySceneControls(sc);
       case 'wish_wall':
-        return this.renderContextualWishWallSceneControls();
+        return this.renderContextualWishWallSceneControls(sc);
       case 'universal':
-        return this.renderContextualUniversalSceneControls();
+        return this.renderContextualUniversalSceneControls(sc);
       case 'special':
-        return this.renderContextualSpecialSceneControls();
+        return this.renderContextualSpecialSceneControls(sc);
       default:
-        return this.renderContextualTextSceneControls();
+        return this.renderContextualTextSceneControls(sc);
     }
   }
 
-  renderContextualTextSceneControls() {
-    const s = this.scene.settings || {};
-    const elements = this.getElementsList();
+  renderContextualTextSceneControls(scene = this.currentRenderScene) {
+    const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
+    const s = sc?.settings || {};
+    const elements = this.getElementsList(sc);
     const titleEl = elements.find(e => e.id === 'title' || e.role === 'title');
-    const msgEl = elements.find(e => e.id === 'subtitle' || e.id === 'message' || e.role === 'body' || e.role === 'subtitle') || elements[0];
+    const msgEl = elements.find(e => e.id === 'subtitle' || e.id === 'message' || e.role === 'body' || e.role === 'subtitle') || null;
     
     const titleVal = s.titleText || s.title || titleEl?.content || '';
     const msgVal = s.messageText || s.textContent || s.subtitleText || msgEl?.content || '';
@@ -2019,29 +2031,30 @@ export class SmartInspectorView {
     `;
   }
 
-  renderSceneTimingSection() {
+  renderSceneTimingSection(scene = this.currentRenderScene) {
+    const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
     return `
       <!-- Scene Configuration & Timing Settings -->
       <div class="inspector-section" style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:12px;">
         <div class="inspector-section-title">Scene Settings & Timing</div>
         <div class="form-group">
           <label style="font-size:0.72rem; color:var(--text-muted);">Scene Name</label>
-          <input type="text" class="form-input" id="inspSceneName" value="${this.scene.name || 'Scene'}" />
+          <input type="text" class="form-input" id="inspSceneName" value="${sc?.name || 'Scene'}" />
         </div>
 
         <div class="form-row" style="margin-top:6px;">
           <div class="form-group">
             <label style="font-size:0.72rem; color:var(--text-muted);">Duration (s)</label>
-            <input type="number" class="form-input" id="inspSceneDuration" value="${this.scene.duration || 6}" min="2" max="30" />
+            <input type="number" class="form-input" id="inspSceneDuration" value="${sc?.duration || 6}" min="2" max="30" />
           </div>
           <div class="form-group">
             <label style="font-size:0.72rem; color:var(--text-muted);">Transition</label>
             <select class="form-input" id="inspSceneTransition">
-              <option value="fade" ${this.scene.transition === 'fade' || !this.scene.transition ? 'selected' : ''}>Fade</option>
-              <option value="slide" ${this.scene.transition === 'slide' ? 'selected' : ''}>Slide</option>
-              <option value="zoom" ${this.scene.transition === 'zoom' ? 'selected' : ''}>Zoom</option>
-              <option value="pop" ${this.scene.transition === 'pop' ? 'selected' : ''}>Pop</option>
-              <option value="flip" ${this.scene.transition === 'flip' ? 'selected' : ''}>Flip</option>
+              <option value="fade" ${sc?.transition === 'fade' || !sc?.transition ? 'selected' : ''}>Fade</option>
+              <option value="slide" ${sc?.transition === 'slide' ? 'selected' : ''}>Slide</option>
+              <option value="zoom" ${sc?.transition === 'zoom' ? 'selected' : ''}>Zoom</option>
+              <option value="pop" ${sc?.transition === 'pop' ? 'selected' : ''}>Pop</option>
+              <option value="flip" ${sc?.transition === 'flip' ? 'selected' : ''}>Flip</option>
             </select>
           </div>
         </div>
@@ -2049,180 +2062,195 @@ export class SmartInspectorView {
         <div class="form-group" style="margin-top:8px; padding:6px 10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:var(--radius-sm, 6px);">
           <label style="font-size:0.75rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-weight:700; margin:0;">
             <span>🔒 Lock Layout Composition</span>
-            <input type="checkbox" id="inspLockLayout" ${this.scene.lockedLayout !== false ? 'checked' : ''} />
+            <input type="checkbox" id="inspLockLayout" ${sc?.lockedLayout !== false ? 'checked' : ''} />
           </label>
         </div>
       </div>
     `;
   }
 
-  attachEvents(inspector, activeEl) {
+  attachEvents(inspector, activeEl, scene) {
     const notifyChange = () => {
       this.onProjectModified();
     };
 
+    const getTargetScene = () => {
+      const sId = (activeEl ? this.selectedElementSceneId : this.activeSceneId) || scene?.id || this.activeSceneId;
+      return (sId && this.project?.scenes?.find(s => s.id === sId)) || scene || this.scene;
+    };
+
+    const updateElementProp = (elementId, updates) => {
+      if (!elementId || !updates) return;
+      const ownerSceneId = this.selectedElementSceneId || scene?.id || this.activeSceneId;
+      const targetScene = (ownerSceneId && this.project?.scenes?.find(s => s.id === ownerSceneId)) || scene;
+      if (!targetScene) return;
+      const elements = targetScene.elements || targetScene.textElements || [];
+      const el = elements.find(e => e.id === elementId) || (activeEl && activeEl.id === elementId ? activeEl : null);
+      if (el) {
+        Object.assign(el, updates);
+        if (updates.content !== undefined && updates.text === undefined) {
+          el.text = updates.content;
+        }
+      }
+      if (activeEl && activeEl.id === elementId) {
+        Object.assign(activeEl, updates);
+        if (updates.content !== undefined && updates.text === undefined) {
+          activeEl.text = updates.content;
+        }
+      }
+      updateTextElement(targetScene, elementId, updates);
+      notifyChange();
+    };
+
     const handleTextElementPropChange = (target) => {
       if (!activeEl) return;
-      const targetScene = this.project?.scenes?.find(s => s.id === (this.selectedElementSceneId || this.activeSceneId || this.scene?.id)) || this.scene;
       if (target.id === 'inspTextContent') {
-        activeEl.content = target.value;
-        activeEl.text = target.value;
-        if (targetScene) updateTextElement(targetScene, activeEl.id, { content: target.value });
-        notifyChange();
+        updateElementProp(activeEl.id, { content: target.value });
       }
       if (target.id === 'inspFontSize') {
         const size = parseInt(target.value, 10) || 32;
-        activeEl.fontSize = size;
-        if (targetScene) updateTextElement(targetScene, activeEl.id, { fontSize: size });
-        notifyChange();
+        updateElementProp(activeEl.id, { fontSize: size });
       }
       if (target.id === 'inspTextColor') {
-        activeEl.color = target.value;
-        if (targetScene) updateTextElement(targetScene, activeEl.id, { color: target.value });
-        notifyChange();
+        updateElementProp(activeEl.id, { color: target.value });
       }
       if (target.id === 'inspTextOpacity') {
         const op = (parseFloat(target.value) || 100) / 100;
-        activeEl.opacity = op;
-        if (targetScene) updateTextElement(targetScene, activeEl.id, { opacity: op });
-        notifyChange();
+        updateElementProp(activeEl.id, { opacity: op });
       }
       if (target.id === 'inspLetterSpacing') {
         const ls = parseFloat(target.value) || 0;
-        activeEl.letterSpacing = `${ls}px`;
-        if (targetScene) updateTextElement(targetScene, activeEl.id, { letterSpacing: `${ls}px` });
-        notifyChange();
+        updateElementProp(activeEl.id, { letterSpacing: `${ls}px` });
       }
     };
 
     inspector.addEventListener('change', (e) => {
       handleTextElementPropChange(e.target);
-      if (!this.scene.settings) this.scene.settings = {};
-      if (!this.scene.settings.animationConfig) this.scene.settings.animationConfig = {};
-      if (!this.project.wishWall) this.project.wishWall = {};
+      const targetScene = getTargetScene();
+      if (targetScene) {
+        if (!targetScene.settings) targetScene.settings = {};
+        if (!targetScene.settings.animationConfig) targetScene.settings.animationConfig = {};
+        if (!this.project.wishWall) this.project.wishWall = {};
 
-      if (e.target.id === 'inspSpecialAnimDuration') {
-        this.scene.settings.animationConfig.duration = parseFloat(e.target.value) || 2.5;
-        notifyChange();
-      }
-      if (e.target.id === 'inspSpecialAnimDelay') {
-        this.scene.settings.animationConfig.delay = parseFloat(e.target.value) || 0;
-        notifyChange();
-      }
-      if (e.target.id === 'inspSpecialAnimEase') {
-        this.scene.settings.animationConfig.ease = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspSpecialAnimIntensity') {
-        this.scene.settings.animationConfig.intensity = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspSceneTransition') {
-        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
-        if (target) target.transition = e.target.value;
-        if (this.scene) this.scene.transition = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspLockLayout') {
-        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
-        if (target) target.lockedLayout = e.target.checked;
-        if (this.scene) this.scene.lockedLayout = e.target.checked;
-        notifyChange();
-      }
+        if (e.target.id === 'inspSpecialAnimDuration') {
+          targetScene.settings.animationConfig.duration = parseFloat(e.target.value) || 2.5;
+          notifyChange();
+        }
+        if (e.target.id === 'inspSpecialAnimDelay') {
+          targetScene.settings.animationConfig.delay = parseFloat(e.target.value) || 0;
+          notifyChange();
+        }
+        if (e.target.id === 'inspSpecialAnimEase') {
+          targetScene.settings.animationConfig.ease = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspSpecialAnimIntensity') {
+          targetScene.settings.animationConfig.intensity = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspSceneTransition') {
+          targetScene.transition = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspLockLayout') {
+          targetScene.lockedLayout = e.target.checked;
+          notifyChange();
+        }
 
-      // Wish Wall scene settings
-      if (e.target.id === 'inspWishWallLayout') {
-        this.scene.settings.wallLayout = e.target.value;
-        this.project.wishWall.layout = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspWishWallAmbience') {
-        this.scene.settings.ambience = e.target.value;
-        this.project.wishWall.ambience = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspWishWallDisplayMode') {
-        this.scene.settings.displayMode = e.target.value;
-        this.project.wishWall.displayMode = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspWishWallReactions') {
-        this.scene.settings.showReactions = e.target.checked;
-        this.project.wishWall.showReactions = e.target.checked;
-        notifyChange();
-      }
-      if (e.target.id === 'inspWishWallTags') {
-        this.scene.settings.showTags = e.target.checked;
-        notifyChange();
-      }
-      if (e.target.id === 'inspWishWallCta') {
-        this.scene.settings.showCta = e.target.checked;
-        notifyChange();
-      }
+        // Wish Wall scene settings
+        if (e.target.id === 'inspWishWallLayout') {
+          targetScene.settings.wallLayout = e.target.value;
+          this.project.wishWall.layout = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspWishWallAmbience') {
+          targetScene.settings.ambience = e.target.value;
+          this.project.wishWall.ambience = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspWishWallDisplayMode') {
+          targetScene.settings.displayMode = e.target.value;
+          this.project.wishWall.displayMode = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspWishWallReactions') {
+          targetScene.settings.showReactions = e.target.checked;
+          this.project.wishWall.showReactions = e.target.checked;
+          notifyChange();
+        }
+        if (e.target.id === 'inspWishWallTags') {
+          targetScene.settings.showTags = e.target.checked;
+          notifyChange();
+        }
+        if (e.target.id === 'inspWishWallCta') {
+          targetScene.settings.showCta = e.target.checked;
+          notifyChange();
+        }
 
-      // Contextual Text Scene Controls
-      if (e.target.id === 'inspTextSceneFontFamily') {
-        this.scene.settings.fontFamily = e.target.value;
-        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
-        if (el) el.fontFamily = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextSceneFontSize') {
-        const sz = parseInt(e.target.value, 10) || 28;
-        this.scene.settings.fontSize = sz;
-        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
-        if (el) el.fontSize = sz;
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextSceneWeight') {
-        this.scene.settings.fontWeight = e.target.value;
-        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
-        if (el) el.fontWeight = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextSceneAlign') {
-        this.scene.settings.textAlign = e.target.value;
-        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
-        if (el) { el.textAlign = e.target.value; el.align = e.target.value; }
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextSceneColor') {
-        this.scene.settings.textColor = e.target.value;
-        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
-        if (el) el.color = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextSceneBgColor') {
-        this.scene.settings.bgColor = e.target.value;
-        notifyChange();
-      }
+        // Contextual Text Scene Controls
+        if (e.target.id === 'inspTextSceneFontFamily') {
+          targetScene.settings.fontFamily = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message');
+          if (el) el.fontFamily = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspTextSceneFontSize') {
+          const sz = parseInt(e.target.value, 10) || 28;
+          targetScene.settings.fontSize = sz;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message');
+          if (el) el.fontSize = sz;
+          notifyChange();
+        }
+        if (e.target.id === 'inspTextSceneWeight') {
+          targetScene.settings.fontWeight = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message');
+          if (el) el.fontWeight = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspTextSceneAlign') {
+          targetScene.settings.textAlign = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message');
+          if (el) { el.textAlign = e.target.value; el.align = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspTextSceneColor') {
+          targetScene.settings.textColor = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message');
+          if (el) el.color = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspTextSceneBgColor') {
+          targetScene.settings.bgColor = e.target.value;
+          notifyChange();
+        }
 
-      // Contextual Image Scene Controls
-      if (e.target.id === 'inspImageSceneFit') {
-        this.scene.settings.imageFit = e.target.value;
-        const imgEl = this.getElementsList().find(x => x.type === 'image');
-        if (imgEl) imgEl.fit = e.target.value;
-        notifyChange();
-      }
+        // Contextual Image Scene Controls
+        if (e.target.id === 'inspImageSceneFit') {
+          targetScene.settings.imageFit = e.target.value;
+          const imgEl = this.getElementsList(targetScene).find(x => x.type === 'image');
+          if (imgEl) imgEl.fit = e.target.value;
+          notifyChange();
+        }
 
-      // Contextual Video Scene Controls
-      if (e.target.id === 'inspVideoAutoplay') {
-        this.scene.settings.autoplay = e.target.checked;
-        notifyChange();
-      }
-      if (e.target.id === 'inspVideoLoop') {
-        this.scene.settings.loop = e.target.checked;
-        notifyChange();
-      }
-      if (e.target.id === 'inspVideoMute') {
-        this.scene.settings.muted = e.target.checked;
-        notifyChange();
-      }
+        // Contextual Video Scene Controls
+        if (e.target.id === 'inspVideoAutoplay') {
+          targetScene.settings.autoplay = e.target.checked;
+          notifyChange();
+        }
+        if (e.target.id === 'inspVideoLoop') {
+          targetScene.settings.loop = e.target.checked;
+          notifyChange();
+        }
+        if (e.target.id === 'inspVideoMute') {
+          targetScene.settings.muted = e.target.checked;
+          notifyChange();
+        }
 
-      // Contextual Gallery Scene Controls
-      if (e.target.id === 'inspGalleryLayout') {
-        this.scene.settings.galleryLayout = e.target.value;
-        notifyChange();
+        // Contextual Gallery Scene Controls
+        if (e.target.id === 'inspGalleryLayout') {
+          targetScene.settings.galleryLayout = e.target.value;
+          notifyChange();
+        }
       }
     });
 
@@ -2245,7 +2273,7 @@ export class SmartInspectorView {
       const layerRow = e.target.closest('.universal-layer-row');
       if (layerRow) {
         const elId = layerRow.dataset.elementId;
-        if (elId) this.onSelectElement(elId);
+        if (elId) this.onSelectElement(elId, scene?.id || this.activeSceneId);
       }
       if (e.target.closest('#btnQuickAddText')) {
         this.onQuickAddElement?.('text');
@@ -2685,76 +2713,73 @@ export class SmartInspectorView {
     });
 
     inspector.addEventListener('input', (e) => {
-      if (!this.scene.settings) this.scene.settings = {};
+      handleTextElementPropChange(e.target);
+      const targetScene = getTargetScene();
+      if (!targetScene) return;
+      if (!targetScene.settings) targetScene.settings = {};
       if (!this.project.wishWall) this.project.wishWall = {};
 
       if (e.target.id === 'inspWishWallTitle') {
-        this.scene.settings.titleText = e.target.value;
+        targetScene.settings.titleText = e.target.value;
         this.project.wishWall.title = e.target.value;
         notifyChange();
       }
       if (e.target.id === 'inspWishWallSubtitle') {
-        this.scene.settings.subtitleText = e.target.value;
+        targetScene.settings.subtitleText = e.target.value;
         this.project.wishWall.subtitle = e.target.value;
         notifyChange();
       }
       if (e.target.id === 'inspWishWallCustomCounter') {
-        this.scene.settings.customCounterText = e.target.value;
+        targetScene.settings.customCounterText = e.target.value;
         notifyChange();
       }
 
       if (e.target.classList.contains('inp-wish-sample-name')) {
         const idx = parseInt(e.target.dataset.wishIdx, 10);
-        if (this.scene.settings?.sampleWishes?.[idx]) {
-          this.scene.settings.sampleWishes[idx].name = e.target.value;
+        if (targetScene.settings?.sampleWishes?.[idx]) {
+          targetScene.settings.sampleWishes[idx].name = e.target.value;
           notifyChange();
         }
       }
       if (e.target.classList.contains('inp-wish-sample-rel')) {
         const idx = parseInt(e.target.dataset.wishIdx, 10);
-        if (this.scene.settings?.sampleWishes?.[idx]) {
-          this.scene.settings.sampleWishes[idx].relationship = e.target.value;
+        if (targetScene.settings?.sampleWishes?.[idx]) {
+          targetScene.settings.sampleWishes[idx].relationship = e.target.value;
           notifyChange();
         }
       }
       if (e.target.classList.contains('inp-wish-sample-msg')) {
         const idx = parseInt(e.target.dataset.wishIdx, 10);
-        if (this.scene.settings?.sampleWishes?.[idx]) {
-          this.scene.settings.sampleWishes[idx].message = e.target.value;
+        if (targetScene.settings?.sampleWishes?.[idx]) {
+          targetScene.settings.sampleWishes[idx].message = e.target.value;
           notifyChange();
         }
       }
 
       if (e.target.id === 'inspSceneName') {
-        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
-        if (target) target.name = e.target.value;
-        if (this.scene) this.scene.name = e.target.value;
+        targetScene.name = e.target.value;
         notifyChange();
       }
       if (e.target.id === 'inspSceneDuration') {
-        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
         const dur = parseInt(e.target.value, 10) || 6;
-        if (target) target.duration = dur;
-        if (this.scene) this.scene.duration = dur;
+        targetScene.duration = dur;
         notifyChange();
       }
 
       if (!activeEl) {
         if (e.target.id === 'inspTextSceneTitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.titleText = e.target.value;
-          this.scene.settings.title = e.target.value;
-          this.scene.name = e.target.value || this.scene.name;
-          const el = this.getElementsList().find(x => x.id === 'title' || x.role === 'title');
+          targetScene.settings.titleText = e.target.value;
+          targetScene.settings.title = e.target.value;
+          targetScene.name = e.target.value || targetScene.name;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'title' || x.role === 'title');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspTextSceneContent') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.messageText = e.target.value;
-          this.scene.settings.textContent = e.target.value;
-          this.scene.settings.subtitleText = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message' || x.role === 'body' || x.role === 'subtitle') || this.getElementsList()[0];
+          targetScene.settings.messageText = e.target.value;
+          targetScene.settings.textContent = e.target.value;
+          targetScene.settings.subtitleText = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message' || x.role === 'body' || x.role === 'subtitle');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
@@ -2762,82 +2787,73 @@ export class SmartInspectorView {
           if (!this.scene.settings) this.scene.settings = {};
           this.scene.settings.titleText = e.target.value;
           this.scene.settings.title = e.target.value;
-          this.scene.name = e.target.value || this.scene.name;
-          const el = this.getElementsList().find(x => x.id === 'title');
+          targetScene.name = e.target.value || targetScene.name;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'title');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspImageSceneSubtitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.subtitleText = e.target.value;
-          this.scene.settings.subtitle = e.target.value;
-          this.scene.settings.caption = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'subtitle');
+          targetScene.settings.subtitleText = e.target.value;
+          targetScene.settings.subtitle = e.target.value;
+          targetScene.settings.caption = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspVideoSceneTitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.titleText = e.target.value;
-          this.scene.settings.title = e.target.value;
-          this.scene.name = e.target.value || this.scene.name;
-          const el = this.getElementsList().find(x => x.id === 'title');
+          targetScene.settings.titleText = e.target.value;
+          targetScene.settings.title = e.target.value;
+          targetScene.name = e.target.value || targetScene.name;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'title');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspGalleryTitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.titleText = e.target.value;
-          this.scene.settings.title = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'title');
+          targetScene.settings.titleText = e.target.value;
+          targetScene.settings.title = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'title');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspGallerySubtitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.subtitleText = e.target.value;
-          this.scene.settings.subtitle = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'subtitle');
+          targetScene.settings.subtitleText = e.target.value;
+          targetScene.settings.subtitle = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
 
         if (e.target.id === 'inspStdTitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.titleText = e.target.value;
-          this.scene.name = e.target.value || this.scene.name;
-          const el = this.getElementsList().find(x => x.id === 'title');
+          targetScene.settings.titleText = e.target.value;
+          targetScene.name = e.target.value || targetScene.name;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'title');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspStdSubtitle') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.subtitleText = e.target.value;
-          this.scene.settings.textContent = e.target.value;
-          this.scene.settings.messageText = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'subtitle');
+          targetScene.settings.subtitleText = e.target.value;
+          targetScene.settings.textContent = e.target.value;
+          targetScene.settings.messageText = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspStdBadge') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.badgeText = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'badge');
+          targetScene.settings.badgeText = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'badge');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspStdSignature') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.signature = e.target.value;
-          this.scene.settings.signatureText = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'signature');
+          targetScene.settings.signature = e.target.value;
+          targetScene.settings.signatureText = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'signature');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
         if (e.target.id === 'inspStdScriptNote') {
-          if (!this.scene.settings) this.scene.settings = {};
-          this.scene.settings.scriptNote = e.target.value;
-          const el = this.getElementsList().find(x => x.id === 'scriptNote');
+          targetScene.settings.scriptNote = e.target.value;
+          const el = this.getElementsList(targetScene).find(x => x.id === 'scriptNote');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
           notifyChange();
         }
@@ -3010,37 +3026,32 @@ export class SmartInspectorView {
       // Text element inputs
       handleTextElementPropChange(e.target);
       if (e.target.id === 'inspTextX') {
-        activeEl.x = parseFloat(e.target.value) || 0;
-        activeEl.left = activeEl.x;
-        notifyChange();
+        const val = parseFloat(e.target.value) || 0;
+        updateElementProp(activeEl.id, { x: val, left: val });
       }
       if (e.target.id === 'inspTextY') {
-        activeEl.y = parseFloat(e.target.value) || 0;
-        activeEl.top = activeEl.y;
-        notifyChange();
+        const val = parseFloat(e.target.value) || 0;
+        updateElementProp(activeEl.id, { y: val, top: val });
       }
       if (e.target.id === 'inspTextWidth') {
-        activeEl.width = e.target.value;
-        notifyChange();
+        updateElementProp(activeEl.id, { width: e.target.value });
       }
       if (e.target.id === 'inspTextRotation') {
-        activeEl.rotation = parseFloat(e.target.value) || 0;
-        notifyChange();
+        const val = parseFloat(e.target.value) || 0;
+        updateElementProp(activeEl.id, { rotation: val });
       }
       if (e.target.id === 'inspBorderRadius') {
-        activeEl.borderRadius = parseInt(e.target.value, 10) || 0;
-        notifyChange();
+        const val = parseInt(e.target.value, 10) || 0;
+        updateElementProp(activeEl.id, { borderRadius: val });
       }
       if (e.target.id === 'inspShapeIcon') {
-        activeEl.content = e.target.value;
-        activeEl.icon = e.target.value;
-        notifyChange();
+        updateElementProp(activeEl.id, { content: e.target.value, icon: e.target.value });
       }
 
       // Image element inputs
       if (e.target.id === 'inspImageOpacity') {
-        activeEl.opacity = (parseFloat(e.target.value) || 100) / 100;
-        notifyChange();
+        const val = (parseFloat(e.target.value) || 100) / 100;
+        updateElementProp(activeEl.id, { opacity: val });
       }
       if (e.target.id === 'inspImageX') {
         activeEl.x = parseFloat(e.target.value) || 0;
@@ -3117,15 +3128,13 @@ export class SmartInspectorView {
       }
 
       if (e.target.id === 'inspSceneTransition') {
-        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        const target = getTargetScene();
         if (target) target.transition = e.target.value;
-        if (this.scene) this.scene.transition = e.target.value;
         notifyChange();
       }
       if (e.target.id === 'inspLockLayout') {
-        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        const target = getTargetScene();
         if (target) target.lockedLayout = e.target.checked;
-        if (this.scene) this.scene.lockedLayout = e.target.checked;
         notifyChange();
       }
 
@@ -3134,41 +3143,28 @@ export class SmartInspectorView {
       }
 
       if (e.target.id === 'inspFontFamily') {
-        activeEl.fontFamily = e.target.value;
-        if (this.scene) updateTextElement(this.scene, activeEl.id, { fontFamily: e.target.value });
-        notifyChange();
+        updateElementProp(activeEl.id, { fontFamily: e.target.value });
       }
       if (e.target.id === 'inspFontWeight') {
-        activeEl.fontWeight = e.target.value;
-        if (this.scene) updateTextElement(this.scene, activeEl.id, { fontWeight: e.target.value });
-        notifyChange();
+        updateElementProp(activeEl.id, { fontWeight: e.target.value });
       }
       if (e.target.id === 'inspTextAlign') {
-        activeEl.textAlign = e.target.value;
-        activeEl.align = e.target.value;
-        if (this.scene) updateTextElement(this.scene, activeEl.id, { textAlign: e.target.value, align: e.target.value });
-        notifyChange();
+        updateElementProp(activeEl.id, { textAlign: e.target.value, align: e.target.value });
       }
       if (e.target.id === 'inspElementAnim') {
-        activeEl.animation = e.target.value;
-        if (this.scene) updateTextElement(this.scene, activeEl.id, { animation: e.target.value });
-        notifyChange();
+        updateElementProp(activeEl.id, { animation: e.target.value });
       }
       if (e.target.id === 'inspImageFit') {
-        activeEl.fit = e.target.value;
-        notifyChange();
+        updateElementProp(activeEl.id, { fit: e.target.value });
       }
       if (e.target.id === 'inspVideoAutoplay') {
-        activeEl.autoplay = e.target.checked;
-        notifyChange();
+        updateElementProp(activeEl.id, { autoplay: e.target.checked });
       }
       if (e.target.id === 'inspVideoLoop') {
-        activeEl.loop = e.target.checked;
-        notifyChange();
+        updateElementProp(activeEl.id, { loop: e.target.checked });
       }
       if (e.target.id === 'inspVideoMute') {
-        activeEl.muted = e.target.checked;
-        notifyChange();
+        updateElementProp(activeEl.id, { muted: e.target.checked });
       }
     });
   }

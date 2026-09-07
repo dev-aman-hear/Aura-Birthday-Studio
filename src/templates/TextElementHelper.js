@@ -132,6 +132,7 @@ export function renderTextElementHTML(scene, elementId, fallbackText = '', fallb
 }
 
 export function updateTextElement(scene, elementId, updates = {}) {
+  if (!scene || !elementId) return null;
   const elements = getOrCreateTextElements(scene);
   let el = elements.find(e => e.id === elementId);
   if (!el) {

@@ -63,11 +63,7 @@ export class UniversalSceneEditor {
 
     const elements = this.getElementsList();
 
-    let activeEl = elements.find(e => e.id === this.selectedElementId);
-    if (!activeEl && elements.length > 0) {
-      activeEl = elements[0];
-      this.selectedElementId = activeEl.id;
-    }
+    let activeEl = elements.find(e => e.id === this.selectedElementId) || null;
 
     container.innerHTML = `
       <div class="panel-header" style="padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
@@ -602,7 +598,7 @@ export class UniversalSceneEditor {
         if (activeEl && this.scene) {
           this.scene.elements = this.getElementsList().filter(el => el.id !== activeEl.id);
           this.scene.textElements = this.scene.elements;
-          this.selectedElementId = this.scene.elements[0]?.id || null;
+          this.selectedElementId = null;
           this.onProjectModified();
           Toast.show('Element removed', 'info');
           const newRoot = this.render();

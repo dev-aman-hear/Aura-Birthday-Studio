@@ -22,7 +22,6 @@ export class ModernEditorLayout {
   constructor(options = {}) {
     this.project = options.project || { scenes: [] };
     this.activeSceneId = options.activeSceneId || options.selectedSceneId || (this.project.scenes?.[0]?.id || null);
-    this.selectedSceneId = this.activeSceneId;
     this.selectedElementId = options.selectedElementId || null;
     this.selectedElementSceneId = this.selectedElementId ? this.activeSceneId : null;
     this.allAssets = options.allAssets || [];
@@ -49,23 +48,26 @@ export class ModernEditorLayout {
     this.canvasWorkspace = null;
   }
 
+  get selectedSceneId() {
+    return this.activeSceneId;
+  }
+
+  set selectedSceneId(val) {
+    this.activeSceneId = val;
+  }
+
   getActiveScene() {
     if (!this.project?.scenes?.length) return null;
-    const targetId = this.activeSceneId || this.selectedSceneId;
-    if (targetId) {
-      const found = this.project.scenes.find(s => s.id === targetId);
+    if (this.activeSceneId) {
+      const found = this.project.scenes.find(s => s.id === this.activeSceneId);
       if (found) return found;
     }
     // Only on initial startup when no scene has ever been chosen
-    if (!this.activeSceneId && !this.selectedSceneId) {
-      const firstScene = this.project.scenes[0] || null;
-      if (firstScene) {
-        this.activeSceneId = firstScene.id;
-        this.selectedSceneId = firstScene.id;
-      }
-      return firstScene;
+    const firstScene = this.project.scenes[0] || null;
+    if (firstScene) {
+      this.activeSceneId = firstScene.id;
     }
-    return null;
+    return firstScene;
   }
 
   async render() {
@@ -146,12 +148,13 @@ export class ModernEditorLayout {
       hideHeader: true,
       onSelectElement: (elId, sceneId) => {
         if (elId) {
+          const targetSceneId = sceneId || this.activeSceneId;
+          const sceneChanged = targetSceneId && targetSceneId !== this.activeSceneId;
+          this.activeSceneId = targetSceneId;
           this.selectedElementId = elId;
-          this.selectedElementSceneId = sceneId || this.activeSceneId;
-          if (sceneId && sceneId !== this.activeSceneId) {
-            this.activeSceneId = sceneId;
-            this.selectedSceneId = sceneId;
-            this.onSelectSceneCallback(sceneId);
+          this.selectedElementSceneId = targetSceneId;
+          if (sceneChanged) {
+            this.onSelectSceneCallback(targetSceneId);
           }
         } else {
           // Deselect element: activeSceneId MUST remain untouched!
@@ -165,12 +168,13 @@ export class ModernEditorLayout {
       },
       onEditTextAction: (elId, sceneId) => {
         if (elId) {
+          const targetSceneId = sceneId || this.activeSceneId;
+          const sceneChanged = targetSceneId && targetSceneId !== this.activeSceneId;
+          this.activeSceneId = targetSceneId;
           this.selectedElementId = elId;
-          this.selectedElementSceneId = sceneId || this.activeSceneId;
-          if (sceneId && sceneId !== this.activeSceneId) {
-            this.activeSceneId = sceneId;
-            this.selectedSceneId = sceneId;
-            this.onSelectSceneCallback(sceneId);
+          this.selectedElementSceneId = targetSceneId;
+          if (sceneChanged) {
+            this.onSelectSceneCallback(targetSceneId);
           }
         }
         this.onSelectElementCallback(elId);
@@ -212,7 +216,6 @@ export class ModernEditorLayout {
       project: this.project,
       scene: activeScene,
       activeSceneId: this.activeSceneId,
-      selectedSceneId: this.selectedSceneId,
       selectedElementSceneId: this.selectedElementSceneId,
       allAssets: this.allAssets,
       selectedElementId: this.selectedElementId,
@@ -220,10 +223,12 @@ export class ModernEditorLayout {
         this.onProjectModified();
         this.storyCanvasView?.updateCanvasContent();
       },
-      onSelectElement: (elId) => {
+      onSelectElement: (elId, sceneId) => {
         if (elId) {
+          const targetSceneId = sceneId || this.activeSceneId;
+          this.activeSceneId = targetSceneId;
           this.selectedElementId = elId;
-          this.selectedElementSceneId = this.activeSceneId;
+          this.selectedElementSceneId = targetSceneId;
         } else {
           this.selectedElementId = null;
           this.selectedElementSceneId = null;
@@ -328,8 +333,15 @@ export class ModernEditorLayout {
   }
 
   getSelectedElement(activeScene) {
-    const scene = activeScene || this.getActiveScene();
-    const elements = scene?.elements || scene?.textElements || [];
+    if (!this.selectedElementId) return null;
+    if (this.selectedElementSceneId && this.selectedElementSceneId !== this.activeSceneId) {
+      this.selectedElementId = null;
+      this.selectedElementSceneId = null;
+      return null;
+    }
+    const scene = (this.selectedElementSceneId && this.project?.scenes?.find(s => s.id === this.selectedElementSceneId)) || activeScene || this.getActiveScene();
+    if (!scene) return null;
+    const elements = scene.elements || scene.textElements || [];
     return elements.find(e => e.id === this.selectedElementId) || null;
   }
 
@@ -409,7 +421,6 @@ export class ModernEditorLayout {
         project: this.project,
         scene: activeScene,
         activeSceneId: this.activeSceneId,
-        selectedSceneId: this.selectedSceneId,
         selectedElementSceneId: this.selectedElementSceneId,
         allAssets: this.allAssets,
         selectedElementId: this.selectedElementId,
@@ -417,10 +428,12 @@ export class ModernEditorLayout {
           this.onProjectModified();
           this.storyCanvasView?.updateCanvasContent();
         },
-        onSelectElement: (elId) => {
+        onSelectElement: (elId, sceneId) => {
           if (elId) {
+            const targetSceneId = sceneId || this.activeSceneId;
+            this.activeSceneId = targetSceneId;
             this.selectedElementId = elId;
-            this.selectedElementSceneId = this.activeSceneId;
+            this.selectedElementSceneId = targetSceneId;
           } else {
             this.selectedElementId = null;
             this.selectedElementSceneId = null;

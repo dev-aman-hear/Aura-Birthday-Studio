@@ -158,13 +158,8 @@ export class StoryCanvasView {
       activeSceneId: this.activeSceneId || this.scene?.id,
       onProjectModified: () => this.onProjectModified(),
       onOpenAssetPicker: (el) => this.onOpenAssetPicker(el),
-      onSelectElement: (id) => {
-        const sel = document.getElementById('edSelTextElement');
-        if (sel) {
-          sel.value = id;
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        this.onSelectElement(id, this.activeSceneId || this.scene?.id);
+      onSelectElement: (id, sceneId) => {
+        this.onSelectElement(id, sceneId || this.activeSceneId || this.scene?.id);
       },
       onEditTextAction: (id, sceneId) => {
         this.onEditTextAction(id, sceneId || this.activeSceneId || this.scene?.id);
@@ -200,7 +195,8 @@ export class StoryCanvasView {
       const textElem = e.target.closest('[data-text-id], [data-element-id], [data-image-id], [data-slot-id], [data-collage-id]');
       if (textElem) {
         const id = textElem.dataset.elementId || textElem.dataset.textId || textElem.dataset.imageId || textElem.dataset.slotId || textElem.dataset.collageId;
-        this.selectionManager.selectElement(id);
+        const currentSceneId = this.activeSceneId || this.scene?.id;
+        this.selectionManager.selectElement(id, currentSceneId);
       } else {
         this.selectionManager.clearSelection();
         this.onSelectElement(null, this.activeSceneId || this.scene?.id);

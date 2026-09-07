@@ -30,9 +30,9 @@ export class SelectionManager {
   }
 
   setScene(scene, viewport) {
-    const isDifferentScene = this.scene && scene && this.scene.id !== scene.id;
+    const isDifferentScene = !this.scene || !scene || this.scene.id !== scene.id || (this.activeSceneId && scene.id !== this.activeSceneId);
     this.scene = scene;
-    if (scene?.id) this.activeSceneId = scene.id;
+    this.activeSceneId = scene?.id || null;
     this.canvasViewport = viewport;
     if (isDifferentScene) {
       this.clearSelection();
@@ -41,7 +41,8 @@ export class SelectionManager {
     }
   }
 
-  selectElement(elementId) {
+  selectElement(elementId, sceneId) {
+    if (sceneId) this.activeSceneId = sceneId;
     this.selectedElementId = elementId;
     this.renderSelectionOverlay();
     this.onSelectElement(elementId, this.activeSceneId || this.scene?.id);
@@ -68,6 +69,10 @@ export class SelectionManager {
 
   getSelectedElement() {
     if (!this.scene || !this.selectedElementId) return null;
+    if (this.activeSceneId && this.scene.id !== this.activeSceneId) {
+      this.clearSelection();
+      return null;
+    }
     const elements = this.getElementsList();
     let el = elements.find(e => e.id === this.selectedElementId);
     if (!el) {
