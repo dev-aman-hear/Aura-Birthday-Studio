@@ -42,6 +42,7 @@ export class RecipientPlayerView {
     this.keydownHandler = null;
     this.fullscreenChangeHandler = null;
     this._isReplaying = false;
+    this.nextButtonTimer = null;
   }
 
   async render() {
@@ -225,19 +226,15 @@ export class RecipientPlayerView {
         </button>
       </div>
 
-      <!-- Compact Dynamic Floating Left Control: Previous Scene (‹) -->
-      <button class="recipient-compact-btn recipient-floating-nav nav-prev" id="btnRecNavPrev" title="Previous Scene (←)" aria-label="Previous Scene">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </button>
-
-      <!-- Compact Dynamic Floating Right Control: Next Scene (›) -->
-      <button class="recipient-compact-btn recipient-floating-nav nav-next" id="btnRecNavNext" title="Next Scene (→)" aria-label="Next Scene">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </button>
+      <!-- Golden Bottom Navigation: Next Scene Button (Appears when scene ends, customizable) -->
+      <div class="recipient-bottom-nav-container" id="recBottomNavContainer" style="display:none;">
+        <button class="recipient-golden-next-btn theme-royal-gold" id="btnRecBottomNext" type="button" aria-label="Next Scene">
+          <span class="golden-btn-text" id="recNextBtnText">Next Scene ✨</span>
+          <svg class="golden-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
 
       <!-- Welcome Overlay Screen (Dismissed on Start) -->
       ${!this.hasWelcomed ? this.renderWelcomeOverlayHtml(recipName, occasion) : ''}
@@ -373,9 +370,14 @@ export class RecipientPlayerView {
       clearTimeout(this.sceneTimer);
       this.sceneTimer = null;
     }
+    if (this.nextButtonTimer) {
+      clearTimeout(this.nextButtonTimer);
+      this.nextButtonTimer = null;
+    }
 
     const root = document.getElementById('recipientStandaloneRoot');
     if (root) {
+      this.hideBottomNextButton(root, true);
       this.renderSceneContent(root, this.scenes[index]);
       this.updateControls(root);
     }
@@ -386,17 +388,54 @@ export class RecipientPlayerView {
     this.sceneStartTime = Date.now();
     this.isPausedForModal = false;
 
-    // Set auto-advance timer if playback is active and not an interactive special scene
-    const isSpecial = this.scenes[index].template && this.scenes[index].template.startsWith('special_');
-    if (this.isPlaying && !isSpecial) {
+    const isLast = this.currentSceneIndex >= this.scenes.length - 1;
+    const settings = this.scenes[index].settings || {};
+    const timing = settings.nextButtonTiming || 'on-scene-end';
+
+    // When the scene ends, the golden Next button appears at the bottom of the scene
+    if (!isLast) {
+      if (timing === 'always') {
+        this.showBottomNextButton(root);
+      } else {
+        this.nextButtonTimer = setTimeout(() => {
+          this.showBottomNextButton();
+        }, this.currentSceneDurationMs);
+      }
+    } else if (this.isPlaying) {
+      // Final scene: stop active progression once duration finishes
       this.sceneTimer = setTimeout(() => {
-        if (this.currentSceneIndex < this.scenes.length - 1) {
-          this.playScene(this.currentSceneIndex + 1);
-        } else {
-          this.isPlaying = false;
-          if (root) this.updateControls(root);
-        }
+        this.isPlaying = false;
+        if (root) this.updateControls(root);
       }, this.currentSceneDurationMs);
+    }
+  }
+
+  showBottomNextButton(root) {
+    if (this.currentSceneIndex >= this.scenes.length - 1) return;
+    const targetRoot = root || document.getElementById('recipientStandaloneRoot') || document;
+    const container = targetRoot.querySelector('#recBottomNavContainer');
+    if (container) {
+      container.style.display = 'flex';
+      requestAnimationFrame(() => {
+        container.classList.add('is-visible');
+      });
+    }
+  }
+
+  hideBottomNextButton(root, immediate = false) {
+    const targetRoot = root || document.getElementById('recipientStandaloneRoot') || document;
+    const container = targetRoot.querySelector('#recBottomNavContainer');
+    if (container) {
+      container.classList.remove('is-visible');
+      if (immediate) {
+        container.style.display = 'none';
+      } else {
+        setTimeout(() => {
+          if (container && !container.classList.contains('is-visible')) {
+            container.style.display = 'none';
+          }
+        }, 450);
+      }
     }
   }
 
@@ -406,12 +445,16 @@ export class RecipientPlayerView {
 
     // Calculate exact remaining time
     const elapsed = Date.now() - (this.sceneStartTime || Date.now());
-    this.remainingSceneDurationMs = Math.max(1000, this.currentSceneDurationMs - elapsed);
+    this.remainingSceneDurationMs = Math.max(500, this.currentSceneDurationMs - elapsed);
 
-    // Stop active timer
+    // Stop active timers
     if (this.sceneTimer) {
       clearTimeout(this.sceneTimer);
       this.sceneTimer = null;
+    }
+    if (this.nextButtonTimer) {
+      clearTimeout(this.nextButtonTimer);
+      this.nextButtonTimer = null;
     }
   }
 
@@ -422,18 +465,23 @@ export class RecipientPlayerView {
     this.sceneStartTime = Date.now();
     this.currentSceneDurationMs = this.remainingSceneDurationMs;
 
+    const isLast = this.currentSceneIndex >= this.scenes.length - 1;
     const activeScene = this.scenes[this.currentSceneIndex];
-    const isSpecial = activeScene?.template && activeScene.template.startsWith('special_');
+    const timing = activeScene?.settings?.nextButtonTiming || 'on-scene-end';
     const root = document.getElementById('recipientStandaloneRoot');
 
-    if (this.isPlaying && !isSpecial) {
+    if (!isLast) {
+      if (timing === 'always') {
+        this.showBottomNextButton(root);
+      } else {
+        this.nextButtonTimer = setTimeout(() => {
+          this.showBottomNextButton();
+        }, this.remainingSceneDurationMs);
+      }
+    } else if (this.isPlaying) {
       this.sceneTimer = setTimeout(() => {
-        if (this.currentSceneIndex < this.scenes.length - 1) {
-          this.playScene(this.currentSceneIndex + 1);
-        } else {
-          this.isPlaying = false;
-          if (root) this.updateControls(root);
-        }
+        this.isPlaying = false;
+        if (root) this.updateControls(root);
       }, this.remainingSceneDurationMs);
     }
   }
@@ -483,23 +531,42 @@ export class RecipientPlayerView {
       !!targetRoot.querySelector('.replay-experience-btn') ||
       !!targetRoot.querySelector('[data-action="replay"]');
 
-    // 1. Previous Scene Button: Hide on First Scene OR on Cinematic Outro with Replay Button
-    const btnPrev = targetRoot.querySelector('#btnRecNavPrev');
-    if (btnPrev) {
-      const isFirst = this.currentSceneIndex <= 0;
-      const shouldHidePrev = isFirst || hasInSceneReplay;
-      btnPrev.disabled = shouldHidePrev;
-      btnPrev.classList.toggle('is-hidden', shouldHidePrev);
-      btnPrev.setAttribute('aria-hidden', shouldHidePrev ? 'true' : 'false');
-    }
+    // 1. Golden Bottom Navigation: Next Scene Button (Customizable per scene, hidden on last scene)
+    const isLast = this.currentSceneIndex >= (this.scenes.length - 1);
+    const container = targetRoot.querySelector('#recBottomNavContainer');
+    const btnNext = targetRoot.querySelector('#btnRecBottomNext');
+    const textSpan = targetRoot.querySelector('#recNextBtnText');
 
-    // 2. Next Scene Button (Dynamic Boundary Check)
-    const btnNext = targetRoot.querySelector('#btnRecNavNext');
-    if (btnNext) {
-      const isLast = this.currentSceneIndex >= (this.scenes.length - 1);
-      btnNext.disabled = isLast;
-      btnNext.classList.toggle('is-hidden', isLast);
-      btnNext.setAttribute('aria-hidden', isLast ? 'true' : 'false');
+    if (isLast) {
+      if (container) {
+        container.classList.remove('is-visible');
+        container.style.display = 'none';
+      }
+    } else {
+      const settings = currentScene.settings || {};
+      const btnText = settings.nextButtonText || 'Next Scene ✨';
+      const btnTheme = settings.nextButtonTheme || 'royal-gold';
+      const btnCustomColor = settings.nextButtonCustomColor || '';
+      const timing = settings.nextButtonTiming || 'on-scene-end';
+
+      if (textSpan) textSpan.textContent = btnText;
+      if (btnNext) {
+        btnNext.className = `recipient-golden-next-btn theme-${btnTheme}`;
+        if (btnTheme === 'custom' && btnCustomColor) {
+          btnNext.style.background = btnCustomColor;
+          btnNext.style.borderColor = btnCustomColor;
+          btnNext.style.color = '#ffffff';
+        } else {
+          btnNext.style.background = '';
+          btnNext.style.borderColor = '';
+          btnNext.style.color = '';
+        }
+      }
+
+      if (timing === 'always' && container) {
+        container.style.display = 'flex';
+        requestAnimationFrame(() => container.classList.add('is-visible'));
+      }
     }
 
     // 3. Audio Mute State Icon
@@ -665,16 +732,9 @@ export class RecipientPlayerView {
       // If modal is open, prevent scene navigation
       if (this.isPausedForModal) return;
 
-      // Dynamic Left Navigation: Previous Scene
-      const btnPrev = e.target.closest('#btnRecNavPrev') || e.target.closest('.nav-prev');
-      if (btnPrev && this.currentSceneIndex > 0) {
-        this.playScene(this.currentSceneIndex - 1);
-        return;
-      }
-
-      // Dynamic Right Navigation: Next Scene
-      const btnNext = e.target.closest('#btnRecNavNext') || e.target.closest('.nav-next');
-      if (btnNext && this.currentSceneIndex < this.scenes.length - 1) {
+      // Golden Bottom Navigation: Next Scene Action
+      const btnBottomNext = e.target.closest('#btnRecBottomNext') || e.target.closest('.recipient-golden-next-btn');
+      if (btnBottomNext && this.currentSceneIndex < this.scenes.length - 1) {
         this.playScene(this.currentSceneIndex + 1);
         return;
       }

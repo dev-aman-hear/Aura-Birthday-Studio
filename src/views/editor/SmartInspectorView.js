@@ -2037,6 +2037,12 @@ export class SmartInspectorView {
 
   renderSceneTimingSection(scene = this.currentRenderScene) {
     const sc = scene || this.currentRenderScene || (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || this.scene;
+    const settings = sc?.settings || {};
+    const nextText = settings.nextButtonText || 'Next Scene ✨';
+    const nextTheme = settings.nextButtonTheme || 'royal-gold';
+    const nextTiming = settings.nextButtonTiming || 'on-scene-end';
+    const nextCustomColor = settings.nextButtonCustomColor || '#FFD700';
+
     return `
       <!-- Scene Configuration & Timing Settings -->
       <div class="inspector-section" style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:12px;">
@@ -2060,6 +2066,47 @@ export class SmartInspectorView {
               <option value="pop" ${sc?.transition === 'pop' ? 'selected' : ''}>Pop</option>
               <option value="flip" ${sc?.transition === 'flip' ? 'selected' : ''}>Flip</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Customizable Golden Next Button Section -->
+        <div class="form-group" style="margin-top:10px; padding:10px 12px; background:linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(255,179,0,0.03) 100%); border:1px solid rgba(255,215,0,0.22); border-radius:var(--radius-sm, 8px);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <label style="font-size:0.75rem; font-weight:700; color:#FFD54F; display:flex; align-items:center; gap:6px; margin:0;">
+              <span>✨ Golden Next Button</span>
+            </label>
+            <span style="font-size:0.68rem; color:var(--text-muted);">Published Player</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px; display:block;">Button Text</label>
+            <input type="text" class="form-input" id="inspNextBtnText" value="${nextText}" placeholder="e.g. Next Scene ✨" />
+          </div>
+
+          <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px; display:block;">Golden Theme</label>
+              <select class="form-input" id="inspNextBtnTheme">
+                <option value="royal-gold" ${nextTheme === 'royal-gold' ? 'selected' : ''}>👑 Royal Gold</option>
+                <option value="champagne-gold" ${nextTheme === 'champagne-gold' ? 'selected' : ''}>🥂 Champagne Gold</option>
+                <option value="rose-gold" ${nextTheme === 'rose-gold' ? 'selected' : ''}>🌸 Rose Gold</option>
+                <option value="amber-gold" ${nextTheme === 'amber-gold' ? 'selected' : ''}>✨ Amber Gold</option>
+                <option value="custom" ${nextTheme === 'custom' ? 'selected' : ''}>🎨 Custom Color</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px; display:block;">Appearance</label>
+              <select class="form-input" id="inspNextBtnTiming">
+                <option value="on-scene-end" ${nextTiming === 'on-scene-end' || !nextTiming ? 'selected' : ''}>When Scene Ends</option>
+                <option value="always" ${nextTiming === 'always' ? 'selected' : ''}>Show Immediately</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" id="inspNextBtnCustomColorGroup" style="margin-top:8px; display:${nextTheme === 'custom' ? 'flex' : 'none'}; align-items:center; gap:8px;">
+            <label style="font-size:0.7rem; color:var(--text-muted); margin:0;">Custom Color:</label>
+            <input type="color" id="inspNextBtnCustomColor" value="${nextCustomColor}" style="width:36px; height:24px; padding:0; border:none; border-radius:4px; cursor:pointer;" />
+            <input type="text" class="form-input" id="inspNextBtnCustomColorHex" value="${nextCustomColor}" style="font-size:0.72rem; padding:3px 6px; flex:1;" />
           </div>
         </div>
 
@@ -2158,6 +2205,28 @@ export class SmartInspectorView {
         }
         if (e.target.id === 'inspLockLayout') {
           targetScene.lockedLayout = e.target.checked;
+          notifyChange();
+        }
+
+        // Golden Next Button Scene Settings
+        if (e.target.id === 'inspNextBtnTheme') {
+          targetScene.settings.nextButtonTheme = e.target.value;
+          const colorGrp = inspector.querySelector('#inspNextBtnCustomColorGroup');
+          if (colorGrp) colorGrp.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+          notifyChange();
+        }
+        if (e.target.id === 'inspNextBtnTiming') {
+          targetScene.settings.nextButtonTiming = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspNextBtnCustomColor') {
+          targetScene.settings.nextButtonCustomColor = e.target.value;
+          const hexInp = inspector.querySelector('#inspNextBtnCustomColorHex');
+          if (hexInp) hexInp.value = e.target.value;
+          notifyChange();
+        }
+        if (e.target.id === 'inspNextBtnText') {
+          targetScene.settings.nextButtonText = e.target.value;
           notifyChange();
         }
 
@@ -2767,6 +2836,25 @@ export class SmartInspectorView {
       if (e.target.id === 'inspSceneDuration') {
         const dur = parseInt(e.target.value, 10) || 6;
         targetScene.duration = dur;
+        notifyChange();
+      }
+      if (e.target.id === 'inspNextBtnText') {
+        targetScene.settings = targetScene.settings || {};
+        targetScene.settings.nextButtonText = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspNextBtnCustomColor') {
+        targetScene.settings = targetScene.settings || {};
+        targetScene.settings.nextButtonCustomColor = e.target.value;
+        const hexInp = inspector.querySelector('#inspNextBtnCustomColorHex');
+        if (hexInp) hexInp.value = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspNextBtnCustomColorHex') {
+        targetScene.settings = targetScene.settings || {};
+        targetScene.settings.nextButtonCustomColor = e.target.value;
+        const colInp = inspector.querySelector('#inspNextBtnCustomColor');
+        if (colInp) colInp.value = e.target.value;
         notifyChange();
       }
 
