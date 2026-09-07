@@ -161,7 +161,7 @@ export class ModernEditorLayout {
           this.selectedElementId = null;
           this.selectedElementSceneId = null;
         }
-        this.onSelectElementCallback(elId);
+        this.onSelectElementCallback(elId, this.selectedElementSceneId);
         const currentScene = this.getActiveScene();
         this.updateContextualToolbar(currentScene, canvasWorkspace, workspaceGrid);
         this.updateSmartInspector(currentScene, workspaceGrid);
@@ -177,7 +177,7 @@ export class ModernEditorLayout {
             this.onSelectSceneCallback(targetSceneId);
           }
         }
-        this.onSelectElementCallback(elId);
+        this.onSelectElementCallback(elId, this.selectedElementSceneId);
         const currentScene = this.getActiveScene();
         const currentEl = this.getSelectedElement(currentScene);
         this.handleContextAction('editText', currentEl, currentScene, canvasWorkspace, workspaceGrid);
@@ -201,7 +201,7 @@ export class ModernEditorLayout {
         if (this.selectedElementId !== null) {
           this.selectedElementId = null;
           this.selectedElementSceneId = null;
-          this.onSelectElementCallback(null);
+          this.onSelectElementCallback(null, null);
           const currentScene = this.getActiveScene();
           this.updateContextualToolbar(currentScene, canvasWorkspace, workspaceGrid);
           this.updateSmartInspector(currentScene, workspaceGrid);
@@ -233,7 +233,7 @@ export class ModernEditorLayout {
           this.selectedElementId = null;
           this.selectedElementSceneId = null;
         }
-        this.onSelectElementCallback(elId);
+        this.onSelectElementCallback(elId, this.selectedElementSceneId);
         const currentScene = this.getActiveScene();
         this.updateContextualToolbar(currentScene, canvasWorkspace, workspaceGrid);
         this.updateSmartInspector(currentScene, workspaceGrid);
@@ -334,12 +334,8 @@ export class ModernEditorLayout {
 
   getSelectedElement(activeScene) {
     if (!this.selectedElementId) return null;
-    if (this.selectedElementSceneId && this.selectedElementSceneId !== this.activeSceneId) {
-      this.selectedElementId = null;
-      this.selectedElementSceneId = null;
-      return null;
-    }
-    const scene = (this.selectedElementSceneId && this.project?.scenes?.find(s => s.id === this.selectedElementSceneId)) || activeScene || this.getActiveScene();
+    const sceneId = this.selectedElementSceneId || this.activeSceneId;
+    const scene = (sceneId && this.project?.scenes?.find(s => s.id === sceneId)) || activeScene || this.getActiveScene();
     if (!scene) return null;
     const elements = scene.elements || scene.textElements || [];
     return elements.find(e => e.id === this.selectedElementId) || null;
@@ -352,7 +348,7 @@ export class ModernEditorLayout {
     this.selectedElementId = null;
     this.selectedElementSceneId = null;
     this.onSelectSceneCallback(sceneId);
-    this.onSelectElementCallback(null);
+    this.onSelectElementCallback(null, null);
 
     const activeScene = this.getActiveScene();
     if (!activeScene) return;
@@ -438,7 +434,7 @@ export class ModernEditorLayout {
             this.selectedElementId = null;
             this.selectedElementSceneId = null;
           }
-          this.onSelectElementCallback(elId);
+          this.onSelectElementCallback(elId, this.selectedElementSceneId);
           const currentScene = this.getActiveScene();
           this.updateContextualToolbar(currentScene, this.canvasWorkspace, grid);
           this.updateSmartInspector(currentScene, grid);
@@ -702,8 +698,10 @@ export class ModernEditorLayout {
     }
 
     scene.elements.push(newElement);
+    this.activeSceneId = scene.id;
     this.selectedElementId = newId;
-    this.onSelectElementCallback(newId);
+    this.selectedElementSceneId = scene.id;
+    this.onSelectElementCallback(newId, scene.id);
     this.onProjectModified();
     this.storyCanvasView?.updateCanvasContent();
     this.updateContextualToolbar(scene, this.canvasWorkspace, this.workspaceGrid);
@@ -720,8 +718,10 @@ export class ModernEditorLayout {
     copy.y = (copy.y || 50) + 4;
     copy.zIndex = (copy.zIndex || 1) + 2;
     elements.push(copy);
+    this.activeSceneId = scene.id;
     this.selectedElementId = copy.id;
-    this.onSelectElementCallback(copy.id);
+    this.selectedElementSceneId = scene.id;
+    this.onSelectElementCallback(copy.id, scene.id);
     this.onProjectModified();
     this.storyCanvasView?.updateCanvasContent();
     this.updateContextualToolbar(scene, this.canvasWorkspace, this.workspaceGrid);
@@ -745,7 +745,8 @@ export class ModernEditorLayout {
         }
       }
       this.selectedElementId = null;
-      this.onSelectElementCallback(null);
+      this.selectedElementSceneId = null;
+      this.onSelectElementCallback(null, null);
       this.onProjectModified();
       this.storyCanvasView?.updateCanvasContent();
       this.updateContextualToolbar(scene, this.canvasWorkspace, this.workspaceGrid);

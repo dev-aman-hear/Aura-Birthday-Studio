@@ -56,6 +56,7 @@ export class BirthdayStudioApp {
     this.project = null;
     this.selectedSceneId = null;
     this.selectedElementId = null;
+    this.selectedElementSceneId = null;
     this.allAssets = [];
     this.pendingWishCount = 0;
     this.latestPublication = null;
@@ -420,6 +421,7 @@ export class BirthdayStudioApp {
       activeSceneId: this.selectedSceneId,
       selectedSceneId: this.selectedSceneId,
       selectedElementId: this.selectedElementId,
+      selectedElementSceneId: this.selectedElementSceneId,
       allAssets: this.allAssets,
       user: this.user,
       canvasRatio: this.canvasRatio,
@@ -427,9 +429,11 @@ export class BirthdayStudioApp {
       onSelectScene: (sceneId) => {
         this.selectedSceneId = sceneId;
         this.selectedElementId = null;
+        this.selectedElementSceneId = null;
       },
-      onSelectElement: (elementId) => {
+      onSelectElement: (elementId, sceneId) => {
         this.selectedElementId = elementId;
+        this.selectedElementSceneId = elementId ? (sceneId || this.selectedSceneId) : null;
       },
       onViewModeChange: (viewMode, canvasRatio) => {
         this.editorViewMode = viewMode;

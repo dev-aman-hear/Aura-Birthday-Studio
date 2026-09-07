@@ -564,7 +564,7 @@ export class SelectionManager {
 
     const elements = this.getElementsList();
     elements.push(newEl);
-    this.selectElement(newEl.id);
+    this.selectElement(newEl.id, this.activeSceneId || this.scene?.id);
     this.onProjectModified();
   }
 
@@ -577,6 +577,7 @@ export class SelectionManager {
       this.scene.textElements = this.scene.textElements.filter(e => e.id !== this.selectedElementId);
     }
     this.clearSelection();
+    this.onSelectElement(null, this.activeSceneId || this.scene?.id);
     this.onProjectModified();
   }
 

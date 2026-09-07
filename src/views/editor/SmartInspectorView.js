@@ -20,7 +20,7 @@ export class SmartInspectorView {
     this.activeSceneId = options.activeSceneId || (options.scene && options.scene.id) || null;
     this.selectedElementId = options.selectedElementId || null;
     this.selectedElementSceneId = options.selectedElementSceneId || (this.selectedElementId ? this.activeSceneId : null);
-    this.scene = (this.activeSceneId && this.project?.scenes?.find(s => s.id === this.activeSceneId)) || (options.scene && options.scene.id === this.activeSceneId ? options.scene : null);
+    this._initialScene = (options.scene && options.scene.id === this.activeSceneId) ? options.scene : null;
     this.allAssets = options.allAssets || [];
     this.onProjectModified = options.onProjectModified || (() => {});
     this.onSelectElement = options.onSelectElement || (() => {});
@@ -29,6 +29,22 @@ export class SmartInspectorView {
     this.onOpenModeration = options.onOpenModeration || (() => {});
     this.onPreviewWishWall = options.onPreviewWishWall || (() => {});
     this.onQuickAddElement = options.onQuickAddElement || (() => {});
+  }
+
+  get scene() {
+    const sceneId = this.selectedElementId ? this.selectedElementSceneId : this.activeSceneId;
+    return (sceneId && this.project?.scenes?.find(s => s.id === sceneId)) || this._initialScene || null;
+  }
+
+  set scene(val) {
+    this._initialScene = val;
+    if (val && val.id) {
+      if (this.selectedElementId) {
+        this.selectedElementSceneId = val.id;
+      } else {
+        this.activeSceneId = val.id;
+      }
+    }
   }
 
   get selectedSceneId() {
@@ -232,50 +248,41 @@ export class SmartInspectorView {
   }
 
   resolveSelectedElement() {
+    const sceneId = this.selectedElementId ? this.selectedElementSceneId : this.activeSceneId;
+    if (!sceneId) return { scene: null, element: null };
+    const targetScene = (this.project?.scenes?.find(s => s.id === sceneId)) || (this._initialScene && this._initialScene.id === sceneId ? this._initialScene : null);
+    if (!targetScene) return { scene: null, element: null };
+
     if (this.selectedElementId) {
-      const elementSceneId = this.selectedElementSceneId;
-      const scene = (elementSceneId && this.project?.scenes?.find(s => s.id === elementSceneId)) || null;
-      if (scene) {
-        const elements = this.getElementsList(scene);
-        let element = elements.find(e => e.id === this.selectedElementId) || null;
-        if (!element) {
-          const s = scene.settings || {};
-          const slots = scene.slots || {};
-          if (this.selectedElementId === 'photo' || this.selectedElementId === 'reveal-photo' || this.selectedElementId === 'hero_image' || this.selectedElementId === 'hero_photo' || this.selectedElementId?.startsWith('gallery-img') || this.selectedElementId?.startsWith('collage-item')) {
-            element = {
-              id: this.selectedElementId,
-              type: 'image',
-              name: 'Scene Photo',
-              assetId: s.heroPhotoAssetId || s.photoAssetId || slots.reveal_photo || slots.hero_image,
-              url: s.revealPhotoUrl || s.heroPhotoUrl || s.photoUrl || '',
-              fit: s.imageFit || 'cover'
-            };
-          } else if (this.selectedElementId === 'video' || this.selectedElementId === 'main_video') {
-            element = {
-              id: this.selectedElementId,
-              type: 'video',
-              name: 'Scene Video',
-              assetId: s.videoAssetId || slots.main_video || slots.video,
-              url: s.videoUrl || '',
-              autoplay: s.autoplay !== false
-            };
-          }
-        }
-        if (element) {
-          return { scene, element };
+      const elements = this.getElementsList(targetScene);
+      let element = elements.find(e => e.id === this.selectedElementId) || null;
+      if (!element) {
+        const s = targetScene.settings || {};
+        const slots = targetScene.slots || {};
+        if (this.selectedElementId === 'photo' || this.selectedElementId === 'reveal-photo' || this.selectedElementId === 'hero_image' || this.selectedElementId === 'hero_photo' || this.selectedElementId?.startsWith('gallery-img') || this.selectedElementId?.startsWith('collage-item')) {
+          element = {
+            id: this.selectedElementId,
+            type: 'image',
+            name: 'Scene Photo',
+            assetId: s.heroPhotoAssetId || s.photoAssetId || slots.reveal_photo || slots.hero_image,
+            url: s.revealPhotoUrl || s.heroPhotoUrl || s.photoUrl || '',
+            fit: s.imageFit || 'cover'
+          };
+        } else if (this.selectedElementId === 'video' || this.selectedElementId === 'main_video') {
+          element = {
+            id: this.selectedElementId,
+            type: 'video',
+            name: 'Scene Video',
+            assetId: s.videoAssetId || slots.main_video || slots.video,
+            url: s.videoUrl || '',
+            autoplay: s.autoplay !== false
+          };
         }
       }
+      return { scene: targetScene, element: element || null };
     }
 
-    // No element selected or not found: resolve active scene for Scene Settings
-    let activeScene = null;
-    if (this.activeSceneId && this.project?.scenes?.length) {
-      activeScene = this.project.scenes.find(s => s.id === this.activeSceneId) || null;
-    } else if (this.scene && this.scene.id === this.activeSceneId) {
-      activeScene = this.scene;
-    }
-
-    return { scene: activeScene, element: null };
+    return { scene: targetScene, element: null };
   }
 
   getElementsList(targetScene) {
@@ -326,11 +333,8 @@ export class SmartInspectorView {
         ` : ''}
       </div>
 
-      <!-- Hidden compatibility elements for TestRunner BUG-23 & BUG-21 -->
+      <!-- Hidden compatibility elements for TestRunner BUG-23 -->
       <button id="btnAddAssetPicker" style="display:none;" aria-hidden="true"></button>
-      <select id="edSelTextElement" style="display:none;" aria-hidden="true">
-        ${elements.map(el => `<option value="${el.id}" ${el.id === this.selectedElementId ? 'selected' : ''}>${el.id}</option>`).join('')}
-      </select>
 
       <!-- Inspector Body -->
       <div class="inspector-body" id="inspectorBodyContainer">
