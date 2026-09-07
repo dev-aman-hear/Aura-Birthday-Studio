@@ -23,8 +23,8 @@ export function renderCollageTemplate(scene, project, assets = []) {
       { renderUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=400&q=80' }
     ];
   }
-  const customBg = scene.settings?.bgGradient;
-  const bgStyle = customBg ? `background: ${customBg};` : `background: var(--style-gradient, linear-gradient(135deg, #1f1235 0%, #110826 100%));`;
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bgStyle = customBg ? `background: ${customBg} !important;` : `background: var(--style-gradient, linear-gradient(135deg, #1f1235 0%, #110826 100%));`;
   const titleText = scene.settings?.titleText !== undefined ? scene.settings.titleText : '🎨 Photo Collage';
 
   return `

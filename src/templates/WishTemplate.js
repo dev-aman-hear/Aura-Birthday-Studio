@@ -6,8 +6,8 @@ export function renderWishTemplate(scene, project, assets = []) {
   const wishTitle = scene.settings?.titleText !== undefined ? scene.settings.titleText : (occTheme.wishTitle || 'Warmest Wishes!');
   const wishSubtitle = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : (occTheme.wishSubtitle || 'Wishing you continuous happiness, success, and joy!');
   const btnText = scene.settings?.buttonText !== undefined ? scene.settings.buttonText : 'Replay';
-  const customBg = scene.settings?.bgGradient;
-  const bgStyle = customBg ? `background: ${customBg};` : `background: var(--style-gradient, ${occTheme.bgGradient});`;
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bgStyle = customBg ? `background: ${customBg} !important;` : `background: var(--style-gradient, ${occTheme.bgGradient});`;
 
   return `
     <div class="template-container final-wish-template" style="${bgStyle}">

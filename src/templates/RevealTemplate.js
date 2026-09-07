@@ -12,8 +12,8 @@ export function renderRevealTemplate(scene, project, assets = []) {
   const defaultBadge = scene.settings?.badgeText !== undefined ? scene.settings.badgeText : `${occTheme.icon} BIG REVEAL ${occTheme.icon}`;
   const titleText = scene.settings?.titleText !== undefined ? scene.settings.titleText : `${recipientName}${age}`;
   const subtitleText = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : occTheme.defaultMessage;
-  const customBg = scene.settings?.bgGradient;
-  const bgStyle = customBg ? `background: ${customBg};` : `background: var(--style-gradient, ${occTheme.revealGradient});`;
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bgStyle = customBg ? `background: ${customBg} !important;` : `background: var(--style-gradient, ${occTheme.revealGradient});`;
 
   return `
     <div class="template-container reveal-template" style="${bgStyle}">

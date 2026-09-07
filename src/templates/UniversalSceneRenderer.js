@@ -85,8 +85,10 @@ export class UniversalSceneRenderer {
 
     // Otherwise fallback to structured cinematic scene templates
     const innerHtml = this.renderLegacyTemplate(scene, project, assets, options);
+    const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+    const bgAttr = customBg ? `background: ${customBg} !important;` : '';
     return `
-      <div class="universal-scene-viewport theme-wrapper theme-${style.id}" style="width:100%; height:100%; position:relative; overflow:hidden; container-type:inline-size; container-name:sceneCanvas; ${styleCssVars}">
+      <div class="universal-scene-viewport theme-wrapper theme-${style.id}" style="width:100%; height:100%; position:relative; ${bgAttr} overflow:hidden; container-type:inline-size; container-name:sceneCanvas; ${styleCssVars}">
         ${innerHtml}
       </div>
     `;
@@ -96,7 +98,7 @@ export class UniversalSceneRenderer {
    * Universal Canvas Renderer for Scenes with Custom Elements
    */
   static renderCustomElementsCanvas(scene, rawElements, replacements, assets, options, style, styleCssVars) {
-    const bg = scene.settings?.bgGradient || scene.settings?.bgColor || style?.background?.gradient || 'linear-gradient(135deg, #1e1b2e 0%, #0f0c1b 100%)';
+    const bg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint || style?.background?.gradient || 'linear-gradient(135deg, #1e1b2e 0%, #0f0c1b 100%)';
     const overlay = style?.background?.overlayPattern && style.background.overlayPattern !== 'none' ? style.background.overlayPattern : '';
     const sortedElements = [...rawElements].sort((a, b) => (a.zIndex || 1) - (b.zIndex || 1));
 

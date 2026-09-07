@@ -9,8 +9,8 @@ export function renderMessageTemplate(scene, project, assets = []) {
   const textAsset = assets.find(a => a.type === 'text');
   const messageText = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : (scene.settings?.textContent !== undefined ? scene.settings.textContent : (scene.settings?.messageText !== undefined ? scene.settings.messageText : (textAsset?.metadata?.textContent || occTheme.defaultMessage)));
   const signatureText = scene.settings?.signatureText !== undefined ? scene.settings.signatureText : (scene.settings?.signature !== undefined ? scene.settings.signature : (project?.creator?.name ? `— With love, ${project.creator.name}` : '— With love, Your Name'));
-  const customBg = scene.settings?.bgGradient;
-  const bgStyle = customBg ? `background: ${customBg};` : `background: var(--style-gradient, ${occTheme.bgGradient});`;
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bgStyle = customBg ? `background: ${customBg} !important;` : `background: var(--style-gradient, ${occTheme.bgGradient});`;
 
   return `
     <div class="template-container message-template" style="${bgStyle}">

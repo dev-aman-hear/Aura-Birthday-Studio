@@ -42,7 +42,8 @@ export function renderTimelineTemplate(scene = {}, project = {}, assets = []) {
   }
 
   const titleText = scene.settings?.titleText !== undefined ? scene.settings.titleText : '⏳ Memory Timeline';
-  const bg = scene.settings?.bgGradient || occTheme.bgGradient;
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bg = customBg ? `${customBg} !important` : occTheme.bgGradient;
 
   return `
     <div class="template-container timeline-template" style="background: ${bg}">

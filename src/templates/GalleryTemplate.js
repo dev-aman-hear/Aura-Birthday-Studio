@@ -29,8 +29,11 @@ export function renderGalleryTemplate(scene, project, assets = []) {
   const subtitleText = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : (scene.settings?.subtitle || 'A collection of beautiful moments shared together');
   const layout = scene.settings?.galleryLayout || scene.settings?.layout || 'grid';
 
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bgStyle = customBg ? `background: ${customBg} !important;` : '';
+
   return `
-    <div class="template-container gallery-template">
+    <div class="template-container gallery-template" style="${bgStyle}">
       <div class="gallery-header">
         <h2>${renderTextElementHTML(scene, 'title', titleText, 'gallery-title')}</h2>
         <p>${renderTextElementHTML(scene, 'subtitle', subtitleText, 'gallery-subtitle')}</p>

@@ -12,8 +12,8 @@ export function renderHeroTemplate(scene, project, assets = []) {
   const defaultTitle = scene.settings?.titleText !== undefined ? scene.settings.titleText : (scene.settings?.title !== undefined ? scene.settings.title : (recipientName ? recipientName.toUpperCase() : 'CELEBRATION'));
   const defaultSub = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : (scene.settings?.subtitle !== undefined ? scene.settings.subtitle : 'Get ready for a visual celebration');
   const scriptNote = scene.settings?.scriptNote !== undefined ? scene.settings.scriptNote : 'made just for you.';
-  const customBg = scene.settings?.bgGradient || scene.settings?.bgColor;
-  const bgStyle = customBg ? `background: ${customBg};` : (heroImage && scene.settings?.showHeroAsBg ? `background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${heroImage}') center/cover no-repeat;` : `background: var(--style-gradient, ${occTheme.bgGradient});`);
+  const customBg = scene.settings?.bgColor || scene.settings?.bgGradient || scene.settings?.backgroundTint;
+  const bgStyle = customBg ? `background: ${customBg} !important;` : (heroImage && scene.settings?.showHeroAsBg ? `background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${heroImage}') center/cover no-repeat;` : `background: var(--style-gradient, ${occTheme.bgGradient});`);
 
   return `
     <div class="template-container hero-template" style="${bgStyle}">

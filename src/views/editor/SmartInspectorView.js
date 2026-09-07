@@ -2070,6 +2070,8 @@ export class SmartInspectorView {
     const nextTheme = settings.nextButtonTheme || 'royal-gold';
     const nextTiming = settings.nextButtonTiming || 'on-scene-end';
     const nextCustomColor = settings.nextButtonCustomColor || '#FFD700';
+    const scBgColor = settings.bgColor || settings.backgroundTint || (settings.bgGradient && !settings.bgGradient.startsWith('linear') ? settings.bgGradient : '#1a162b');
+    const colorPickerVal = scBgColor.startsWith('#') && scBgColor.length === 7 ? scBgColor : '#1a162b';
 
     return `
       <!-- Scene Configuration & Timing Settings -->
@@ -2094,6 +2096,16 @@ export class SmartInspectorView {
               <option value="pop" ${sc?.transition === 'pop' ? 'selected' : ''}>Pop</option>
               <option value="flip" ${sc?.transition === 'flip' ? 'selected' : ''}>Flip</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Custom Background Tint Controls -->
+        <div class="form-group" style="margin-top:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700; margin-bottom:4px; display:block;">Scene Background Tint</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="color" id="inspSceneBgColor" value="${colorPickerVal}" style="width:36px; height:28px; padding:0; border:none; border-radius:4px; cursor:pointer;" />
+            <input type="text" class="form-input" id="inspSceneBgColorHex" value="${scBgColor}" placeholder="#1a162b or CSS color" style="font-size:0.75rem; padding:4px 8px; flex:1;" />
+            <button class="btn btn-ghost btn-xs" id="btnResetSceneBgColor" type="button" title="Reset to default background" style="font-size:0.7rem; padding:4px 8px;">Reset</button>
           </div>
         </div>
 
@@ -2156,6 +2168,53 @@ export class SmartInspectorView {
     const getTargetScene = () => {
       const sId = (activeEl ? this.selectedElementSceneId : this.activeSceneId) || scene?.id || this.activeSceneId;
       return (sId && this.project?.scenes?.find(s => s.id === sId)) || scene || this.scene;
+    };
+
+    const updateCanvasGoldenPreview = () => {
+      const btn = document.getElementById('canvasGoldenBtnPreview');
+      const text = document.getElementById('canvasGoldenBtnText');
+      const targetScene = getTargetScene();
+      const s = targetScene?.settings || {};
+      if (btn) {
+        const theme = s.nextButtonTheme || 'royal-gold';
+        btn.className = `recipient-golden-next-btn theme-${theme}`;
+        if (theme === 'custom' && s.nextButtonCustomColor) {
+          btn.style.background = s.nextButtonCustomColor;
+          btn.style.borderColor = s.nextButtonCustomColor;
+          btn.style.color = '#ffffff';
+        } else {
+          btn.style.background = '';
+          btn.style.borderColor = '';
+          btn.style.color = '';
+        }
+      }
+      if (text) {
+        text.textContent = s.nextButtonText || 'Next Scene ✨';
+      }
+    };
+
+    const applyLiveSceneBgColor = (colorVal) => {
+      const targetScene = getTargetScene();
+      if (!targetScene) return;
+      if (!targetScene.settings) targetScene.settings = {};
+      targetScene.settings.bgColor = colorVal;
+      targetScene.settings.backgroundTint = colorVal;
+
+      const picker = inspector.querySelector('#inspSceneBgColor');
+      const hex = inspector.querySelector('#inspSceneBgColorHex');
+      const textPicker = inspector.querySelector('#inspTextSceneBgColor');
+      if (picker && picker !== document.activeElement && colorVal.startsWith('#') && colorVal.length === 7) picker.value = colorVal;
+      if (hex && hex !== document.activeElement) hex.value = colorVal;
+      if (textPicker && textPicker !== document.activeElement && colorVal.startsWith('#') && colorVal.length === 7) textPicker.value = colorVal;
+
+      const canvasViewport = document.getElementById('canvasViewportBody');
+      if (canvasViewport) {
+        const elToTint = canvasViewport.querySelector('.template-container, .special-scene-viewport, .universal-scene-viewport');
+        if (elToTint) {
+          elToTint.style.setProperty('background', colorVal, 'important');
+        }
+      }
+      notifyChange();
     };
 
     const updateElementProp = (elementId, updates) => {
@@ -2236,11 +2295,17 @@ export class SmartInspectorView {
           notifyChange();
         }
 
+        // Scene Background Tint Settings
+        if (e.target.id === 'inspSceneBgColor' || e.target.id === 'inspSceneBgColorHex' || e.target.id === 'inspTextSceneBgColor') {
+          applyLiveSceneBgColor(e.target.value);
+        }
+
         // Golden Next Button Scene Settings
         if (e.target.id === 'inspNextBtnTheme') {
           targetScene.settings.nextButtonTheme = e.target.value;
           const colorGrp = inspector.querySelector('#inspNextBtnCustomColorGroup');
           if (colorGrp) colorGrp.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+          updateCanvasGoldenPreview();
           notifyChange();
         }
         if (e.target.id === 'inspNextBtnTiming') {
@@ -2251,10 +2316,19 @@ export class SmartInspectorView {
           targetScene.settings.nextButtonCustomColor = e.target.value;
           const hexInp = inspector.querySelector('#inspNextBtnCustomColorHex');
           if (hexInp) hexInp.value = e.target.value;
+          updateCanvasGoldenPreview();
+          notifyChange();
+        }
+        if (e.target.id === 'inspNextBtnCustomColorHex') {
+          targetScene.settings.nextButtonCustomColor = e.target.value;
+          const colInp = inspector.querySelector('#inspNextBtnCustomColor');
+          if (colInp) colInp.value = e.target.value;
+          updateCanvasGoldenPreview();
           notifyChange();
         }
         if (e.target.id === 'inspNextBtnText') {
           targetScene.settings.nextButtonText = e.target.value;
+          updateCanvasGoldenPreview();
           notifyChange();
         }
 
@@ -2362,6 +2436,24 @@ export class SmartInspectorView {
       }
       if (e.target.closest('#btnSceneChangeImage')) {
         this.onOpenAssetPicker({ type: 'image', slotId: 'hero_image' });
+      }
+      if (e.target.closest('#btnResetSceneBgColor')) {
+        const targetScene = getTargetScene();
+        if (targetScene && targetScene.settings) {
+          delete targetScene.settings.bgColor;
+          delete targetScene.settings.backgroundTint;
+          const canvasViewport = document.getElementById('canvasViewportBody');
+          if (canvasViewport) {
+            const elToTint = canvasViewport.querySelector('.template-container, .special-scene-viewport, .universal-scene-viewport');
+            if (elToTint) {
+              elToTint.style.removeProperty('background');
+            }
+          }
+          notifyChange();
+          const updated = this.render();
+          inspector.replaceWith(updated);
+        }
+        return;
       }
       if (e.target.closest('#btnSceneChangeVideo')) {
         this.onOpenAssetPicker({ type: 'video', slotId: 'video' });
@@ -2867,9 +2959,15 @@ export class SmartInspectorView {
         targetScene.duration = dur;
         notifyChange();
       }
+      // Live Scene Background Tint on input
+      if (e.target.id === 'inspSceneBgColor' || e.target.id === 'inspSceneBgColorHex' || e.target.id === 'inspTextSceneBgColor') {
+        applyLiveSceneBgColor(e.target.value);
+      }
+
       if (e.target.id === 'inspNextBtnText') {
         targetScene.settings = targetScene.settings || {};
         targetScene.settings.nextButtonText = e.target.value;
+        updateCanvasGoldenPreview();
         notifyChange();
       }
       if (e.target.id === 'inspNextBtnCustomColor') {
@@ -2877,6 +2975,7 @@ export class SmartInspectorView {
         targetScene.settings.nextButtonCustomColor = e.target.value;
         const hexInp = inspector.querySelector('#inspNextBtnCustomColorHex');
         if (hexInp) hexInp.value = e.target.value;
+        updateCanvasGoldenPreview();
         notifyChange();
       }
       if (e.target.id === 'inspNextBtnCustomColorHex') {
@@ -2884,6 +2983,7 @@ export class SmartInspectorView {
         targetScene.settings.nextButtonCustomColor = e.target.value;
         const colInp = inspector.querySelector('#inspNextBtnCustomColor');
         if (colInp) colInp.value = e.target.value;
+        updateCanvasGoldenPreview();
         notifyChange();
       }
 

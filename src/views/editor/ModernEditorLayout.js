@@ -184,6 +184,13 @@ export class ModernEditorLayout {
       },
       onOpenAssetPicker: (el) => this.openAssetPickerForElement(el),
       onOpenAddSceneModal: () => this.openAddScenePicker(),
+      onNextSceneRequested: async () => {
+        const scenes = this.project?.scenes || [];
+        if (scenes.length <= 1) return;
+        const currIdx = scenes.findIndex(s => s.id === this.activeSceneId);
+        const nextIdx = (currIdx + 1) % scenes.length;
+        await this.handleSceneChange(scenes[nextIdx].id);
+      },
       onProjectModified: () => {
         this.onProjectModified();
         this.storyCanvasView?.updateCanvasContent();

@@ -393,15 +393,15 @@ export class RecipientPlayerView {
     const timing = settings.nextButtonTiming || 'on-scene-end';
 
     // When the scene ends, the golden Next button appears at the bottom of the scene
-    if (!isLast) {
-      if (timing === 'always') {
-        this.showBottomNextButton(root);
-      } else {
-        this.nextButtonTimer = setTimeout(() => {
-          this.showBottomNextButton();
-        }, this.currentSceneDurationMs);
-      }
-    } else if (this.isPlaying) {
+    if (timing === 'always') {
+      this.showBottomNextButton(root);
+    } else {
+      this.nextButtonTimer = setTimeout(() => {
+        this.showBottomNextButton();
+      }, this.currentSceneDurationMs);
+    }
+
+    if (isLast && this.isPlaying) {
       // Final scene: stop active progression once duration finishes
       this.sceneTimer = setTimeout(() => {
         this.isPlaying = false;
@@ -411,7 +411,6 @@ export class RecipientPlayerView {
   }
 
   showBottomNextButton(root) {
-    if (this.currentSceneIndex >= this.scenes.length - 1) return;
     const targetRoot = root || document.getElementById('recipientStandaloneRoot') || document;
     const container = targetRoot.querySelector('#recBottomNavContainer');
     if (container) {
@@ -470,15 +469,15 @@ export class RecipientPlayerView {
     const timing = activeScene?.settings?.nextButtonTiming || 'on-scene-end';
     const root = document.getElementById('recipientStandaloneRoot');
 
-    if (!isLast) {
-      if (timing === 'always') {
-        this.showBottomNextButton(root);
-      } else {
-        this.nextButtonTimer = setTimeout(() => {
-          this.showBottomNextButton();
-        }, this.remainingSceneDurationMs);
-      }
-    } else if (this.isPlaying) {
+    if (timing === 'always') {
+      this.showBottomNextButton(root);
+    } else {
+      this.nextButtonTimer = setTimeout(() => {
+        this.showBottomNextButton();
+      }, this.remainingSceneDurationMs);
+    }
+
+    if (isLast && this.isPlaying) {
       this.sceneTimer = setTimeout(() => {
         this.isPlaying = false;
         if (root) this.updateControls(root);
@@ -531,42 +530,37 @@ export class RecipientPlayerView {
       !!targetRoot.querySelector('.replay-experience-btn') ||
       !!targetRoot.querySelector('[data-action="replay"]');
 
-    // 1. Golden Bottom Navigation: Next Scene Button (Customizable per scene, hidden on last scene)
+    // 1. Golden Bottom Navigation: Next Scene Button (Customizable per scene; offers Replay on last scene)
     const isLast = this.currentSceneIndex >= (this.scenes.length - 1);
     const container = targetRoot.querySelector('#recBottomNavContainer');
     const btnNext = targetRoot.querySelector('#btnRecBottomNext');
     const textSpan = targetRoot.querySelector('#recNextBtnText');
 
-    if (isLast) {
-      if (container) {
-        container.classList.remove('is-visible');
-        container.style.display = 'none';
-      }
-    } else {
-      const settings = currentScene.settings || {};
-      const btnText = settings.nextButtonText || 'Next Scene ✨';
-      const btnTheme = settings.nextButtonTheme || 'royal-gold';
-      const btnCustomColor = settings.nextButtonCustomColor || '';
-      const timing = settings.nextButtonTiming || 'on-scene-end';
+    const settings = currentScene?.settings || {};
+    const defaultText = isLast ? 'Replay Celebration ↻' : 'Next Scene ✨';
+    const btnText = settings.nextButtonText || defaultText;
+    const btnTheme = settings.nextButtonTheme || 'royal-gold';
+    const btnCustomColor = settings.nextButtonCustomColor || '';
+    const timing = settings.nextButtonTiming || 'on-scene-end';
 
-      if (textSpan) textSpan.textContent = btnText;
-      if (btnNext) {
-        btnNext.className = `recipient-golden-next-btn theme-${btnTheme}`;
-        if (btnTheme === 'custom' && btnCustomColor) {
-          btnNext.style.background = btnCustomColor;
-          btnNext.style.borderColor = btnCustomColor;
-          btnNext.style.color = '#ffffff';
-        } else {
-          btnNext.style.background = '';
-          btnNext.style.borderColor = '';
-          btnNext.style.color = '';
-        }
+    if (textSpan) textSpan.textContent = btnText;
+    if (btnNext) {
+      btnNext.className = `recipient-golden-next-btn theme-${btnTheme}`;
+      btnNext.dataset.isLast = isLast ? 'true' : 'false';
+      if (btnTheme === 'custom' && btnCustomColor) {
+        btnNext.style.background = btnCustomColor;
+        btnNext.style.borderColor = btnCustomColor;
+        btnNext.style.color = '#ffffff';
+      } else {
+        btnNext.style.background = '';
+        btnNext.style.borderColor = '';
+        btnNext.style.color = '';
       }
+    }
 
-      if (timing === 'always' && container) {
-        container.style.display = 'flex';
-        requestAnimationFrame(() => container.classList.add('is-visible'));
-      }
+    if (timing === 'always' && container) {
+      container.style.display = 'flex';
+      requestAnimationFrame(() => container.classList.add('is-visible'));
     }
 
     // 3. Audio Mute State Icon
@@ -733,9 +727,14 @@ export class RecipientPlayerView {
       if (this.isPausedForModal) return;
 
       // Golden Bottom Navigation: Next Scene Action
+      // Golden Bottom Navigation: Next Scene Action (or Replay on last scene)
       const btnBottomNext = e.target.closest('#btnRecBottomNext') || e.target.closest('.recipient-golden-next-btn');
-      if (btnBottomNext && this.currentSceneIndex < this.scenes.length - 1) {
-        this.playScene(this.currentSceneIndex + 1);
+      if (btnBottomNext) {
+        if (this.currentSceneIndex < this.scenes.length - 1) {
+          this.playScene(this.currentSceneIndex + 1);
+        } else {
+          this.replayCelebration();
+        }
         return;
       }
 

@@ -15,8 +15,32 @@ export class StoryCanvasView {
     this.onSelectElement = options.onSelectElement || (() => {});
     this.onOpenAssetPicker = options.onOpenAssetPicker || (() => {});
     this.onEditTextAction = options.onEditTextAction || (() => {});
+    this.onNextSceneRequested = options.onNextSceneRequested || (() => {});
     this.hideHeader = options.hideHeader || false;
     this.selectionManager = null;
+  }
+
+  updateCanvasGoldenButton() {
+    const btn = document.getElementById('canvasGoldenBtnPreview');
+    const textSpan = document.getElementById('canvasGoldenBtnText');
+    if (!btn || !this.scene) return;
+
+    const s = this.scene.settings || {};
+    const btnText = s.nextButtonText || 'Next Scene ✨';
+    const btnTheme = s.nextButtonTheme || 'royal-gold';
+    const btnCustomColor = s.nextButtonCustomColor || '';
+
+    if (textSpan) textSpan.textContent = btnText;
+    btn.className = `recipient-golden-next-btn theme-${btnTheme}`;
+    if (btnTheme === 'custom' && btnCustomColor) {
+      btn.style.background = btnCustomColor;
+      btn.style.borderColor = btnCustomColor;
+      btn.style.color = '#ffffff';
+    } else {
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }
   }
 
   async updateCanvasContent() {
@@ -62,6 +86,8 @@ export class StoryCanvasView {
           this.selectionManager.renderSelectionOverlay();
         }
       }
+
+      this.updateCanvasGoldenButton();
     }
   }
 
@@ -136,9 +162,23 @@ export class StoryCanvasView {
       </div>
     `;
 
+    const settings = this.scene.settings || {};
+    const btnText = settings.nextButtonText || 'Next Scene ✨';
+    const btnTheme = settings.nextButtonTheme || 'royal-gold';
+    const btnCustomColor = settings.nextButtonCustomColor || '';
+    const customStyle = (btnTheme === 'custom' && btnCustomColor) ? `style="background: ${btnCustomColor}; border-color: ${btnCustomColor}; color: #ffffff;"` : '';
+
     canvasBox.innerHTML = `
       ${headerHtml}
       <div class="story-canvas-viewport" id="canvasViewportBody" style="flex:1; width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;"></div>
+      <div class="canvas-golden-btn-preview-container" id="canvasGoldenBtnContainer">
+        <button class="recipient-golden-next-btn theme-${btnTheme}" id="canvasGoldenBtnPreview" type="button" aria-label="Next Scene Preview" title="Golden Next Button Preview (Click to advance)" ${customStyle}>
+          <span class="golden-btn-text" id="canvasGoldenBtnText">${btnText}</span>
+          <svg class="golden-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
     `;
 
     const viewport = canvasBox.querySelector('#canvasViewportBody');
@@ -216,6 +256,11 @@ export class StoryCanvasView {
 
     canvasBox.querySelector('#btnAddCanvasShape')?.addEventListener('click', () => {
       if (this.selectionManager) this.selectionManager.addNewShapeElement();
+    });
+
+    canvasBox.querySelector('#canvasGoldenBtnPreview')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onNextSceneRequested();
     });
 
     return canvasBox;

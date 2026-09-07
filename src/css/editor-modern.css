@@ -1019,5 +1019,22 @@
 .gallery-grid.layout-stack .gallery-card:nth-child(2) { transform: rotate(4deg) translate(10px, 0); z-index: 2; }
 .gallery-grid.layout-stack .gallery-card:nth-child(3) { transform: rotate(-2deg) translate(0, -10px); z-index: 3; }
 
+/* Golden Button Canvas Preview */
+.canvas-golden-btn-preview-container {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
 
-
+.canvas-golden-btn-preview-container .recipient-golden-next-btn {
+  box-shadow: 0 8px 24px rgba(255, 179, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.6);
+  font-size: 0.92rem;
+  padding: 10px 24px;
+}
