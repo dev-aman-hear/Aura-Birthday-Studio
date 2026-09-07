@@ -8,17 +8,20 @@ export class StoryCanvasView {
   constructor(options = {}) {
     this.project = options.project;
     this.scene = options.scene;
+    this.activeSceneId = options.activeSceneId || options.scene?.id || null;
     this.allAssets = options.allAssets || [];
     this.onOpenAddSceneModal = options.onOpenAddSceneModal || (() => {});
     this.onProjectModified = options.onProjectModified || (() => {});
     this.onSelectElement = options.onSelectElement || (() => {});
     this.onOpenAssetPicker = options.onOpenAssetPicker || (() => {});
+    this.onEditTextAction = options.onEditTextAction || (() => {});
     this.hideHeader = options.hideHeader || false;
     this.selectionManager = null;
   }
 
   async updateCanvasContent() {
     if (!this.scene) return;
+    if (this.scene.id) this.activeSceneId = this.scene.id;
     const assignedAssets = [];
     if (this.scene.assetIds && this.scene.assetIds.length > 0) {
       for (const id of this.scene.assetIds) {
@@ -152,6 +155,7 @@ export class StoryCanvasView {
     this.selectionManager = new SelectionManager({
       canvasViewport: viewport,
       scene: this.scene,
+      activeSceneId: this.activeSceneId || this.scene?.id,
       onProjectModified: () => this.onProjectModified(),
       onOpenAssetPicker: (el) => this.onOpenAssetPicker(el),
       onSelectElement: (id) => {
@@ -160,7 +164,10 @@ export class StoryCanvasView {
           sel.value = id;
           sel.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        this.onSelectElement(id);
+        this.onSelectElement(id, this.activeSceneId || this.scene?.id);
+      },
+      onEditTextAction: (id, sceneId) => {
+        this.onEditTextAction(id, sceneId || this.activeSceneId || this.scene?.id);
       }
     });
     this.selectionManager.setScene(this.scene, viewport);
@@ -190,14 +197,21 @@ export class StoryCanvasView {
       }
 
       if (e.target.closest('#canvasSelectionOverlay')) return;
-      const textElem = e.target.closest('[data-text-id], [data-element-id]');
+      const textElem = e.target.closest('[data-text-id], [data-element-id], [data-image-id], [data-slot-id], [data-collage-id]');
       if (textElem) {
-        const id = textElem.dataset.textId || textElem.dataset.elementId;
+        const id = textElem.dataset.elementId || textElem.dataset.textId || textElem.dataset.imageId || textElem.dataset.slotId || textElem.dataset.collageId;
         this.selectionManager.selectElement(id);
       } else {
         this.selectionManager.clearSelection();
-        this.onSelectElement(null);
+        this.onSelectElement(null, this.activeSceneId || this.scene?.id);
       }
+    });
+
+    // Clicking anywhere in canvas container outside viewport or overlay clears element selection safely
+    canvasBox.addEventListener('click', (e) => {
+      if (e.target.closest('#canvasViewportBody') || e.target.closest('#canvasSelectionOverlay') || e.target.closest('button')) return;
+      this.selectionManager.clearSelection();
+      this.onSelectElement(null, this.activeSceneId || this.scene?.id);
     });
 
     canvasBox.querySelector('#btnAddCanvasText')?.addEventListener('click', () => {

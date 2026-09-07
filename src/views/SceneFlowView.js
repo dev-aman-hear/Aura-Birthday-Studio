@@ -186,14 +186,25 @@ export class SceneFlowView {
     return `<div style="font-size:1.2rem;">✨ Preview Card</div>`;
   }
 
+  refreshCanvas(container) {
+    const canvas = container.querySelector('.flow-canvas-container');
+    if (!canvas) return;
+    const scenes = (this.project?.scenes || []).sort((a, b) => a.order - b.order);
+    canvas.innerHTML = this.viewMode === 'timeline' ? this.renderTimelineView(scenes) : this.renderFlowchartView(scenes);
+    const countBadge = container.querySelector('.pub-status-badge');
+    if (countBadge) countBadge.textContent = `${scenes.length} Scenes`;
+  }
+
   attachEvents(container) {
     container.addEventListener('click', (e) => {
       if (e.target.id === 'btnViewTimeline') {
         this.viewMode = 'timeline';
+        this.refreshCanvas(container);
         this.onProjectModified();
       }
       if (e.target.id === 'btnViewFlowchart') {
         this.viewMode = 'flowchart';
+        this.refreshCanvas(container);
         this.onProjectModified();
       }
 
@@ -207,6 +218,7 @@ export class SceneFlowView {
         this.project.scenes.push(newScene);
         this.selectedSceneId = newScene.id;
         Toast.show('New scene added!', 'success');
+        this.refreshCanvas(container);
         this.onProjectModified();
       }
 
@@ -215,6 +227,7 @@ export class SceneFlowView {
       if (btnUp) {
         const idx = parseInt(btnUp.dataset.index, 10);
         sceneRepository.reorderScenes(this.project, idx, idx - 1);
+        this.refreshCanvas(container);
         this.onProjectModified();
         return;
       }
@@ -224,6 +237,7 @@ export class SceneFlowView {
       if (btnDown) {
         const idx = parseInt(btnDown.dataset.index, 10);
         sceneRepository.reorderScenes(this.project, idx, idx + 1);
+        this.refreshCanvas(container);
         this.onProjectModified();
         return;
       }
@@ -233,6 +247,7 @@ export class SceneFlowView {
       if (btnDup) {
         sceneRepository.duplicateScene(this.project, btnDup.dataset.sceneId);
         Toast.show('Scene duplicated!', 'info');
+        this.refreshCanvas(container);
         this.onProjectModified();
         return;
       }
@@ -249,6 +264,7 @@ export class SceneFlowView {
           this.selectedSceneId = this.project.scenes[0]?.id;
         }
         Toast.show('Scene deleted', 'info');
+        this.refreshCanvas(container);
         this.onProjectModified();
         return;
       }

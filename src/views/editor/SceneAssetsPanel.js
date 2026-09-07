@@ -40,12 +40,12 @@ export class SceneAssetsPanel {
       return container;
     }
 
-    const def = SceneAssetDefinitionService.getDefinition(this.scene.template);
+    const def = SceneAssetDefinitionService.getDefinition(this.scene.template, this.scene);
     const slotsState = SlotManager.getSceneSlotsState(this.scene, this.allAssets);
     const completeness = SlotManager.getSceneCompleteness(this.scene, this.allAssets);
     const maxCapacity = SceneAssetDefinitionService.getMaxCapacity(this.scene);
     const currentAssetCount = (this.scene.assetIds || []).length;
-    const capacityPct = Math.min(100, Math.round((currentAssetCount / maxCapacity) * 100));
+    const capacityPct = maxCapacity > 0 ? Math.min(100, Math.round((currentAssetCount / maxCapacity) * 100)) : 0;
 
     const requiredSlots = slotsState.filter(s => s.required);
     const optionalSlots = slotsState.filter(s => !s.required);
@@ -54,6 +54,14 @@ export class SceneAssetsPanel {
     const completedRequired = requiredSlots.filter(s => s.isComplete).length;
     const missingRequired = requiredSlots.filter(s => s.isMissingRequired).length;
     const totalOptional = optionalSlots.length;
+
+    const isTextScene = this.scene.template === 'basic_celebration' || this.scene.template === 'basic' || this.scene.template === 'text' || this.scene.template === 'blank' ||
+      (this.scene.template === 'hero' && this.scene.name === 'New Scene' && !this.scene.slots?.hero_image && !this.scene.settings?.heroPhotoAssetId && !this.scene.settings?.photoAssetId && (!this.scene.assetIds || this.scene.assetIds.length === 0));
+
+    if (isTextScene || (slotsState.length === 0 && totalRequired === 0 && totalOptional === 0)) {
+      container.style.display = 'none';
+      return container;
+    }
 
     const isBlankOrUniversal = this.scene.template === 'universal';
 

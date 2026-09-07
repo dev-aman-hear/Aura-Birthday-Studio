@@ -6,6 +6,7 @@
 import { UniversalSceneRenderer } from './UniversalSceneRenderer.js';
 
 export const SCENE_TEMPLATES = [
+  { id: 'basic_celebration', name: 'Basic Celebration', icon: '🔤', description: 'Clean text celebration scene with title and subtitle' },
   { id: 'universal', name: 'Custom Canvas Scene', icon: '✨', description: 'Fully customizable elements canvas (text, images, shapes, videos)' },
   { id: 'hero', name: 'Hero Opening', icon: '🌟', description: 'Opening title, recipient highlight & celebratory subtitle' },
   { id: 'reveal', name: 'Occasion Reveal', icon: '🎁', description: 'Confetti burst, age/date highlight & big reveal message' },
@@ -39,6 +40,10 @@ export const SCENE_TEMPLATES = [
 ];
 
 export const TEMPLATE_ALIASES = {
+  'basic_celebration': 'hero',
+  'basic': 'hero',
+  'text': 'hero',
+  'blank': 'hero',
   'special_text_reveal': 'special_cinematic_intro',
   'special_memory_reveal': 'special_childhood_memories',
   'special_ken_burns': 'special_memory_sequence',

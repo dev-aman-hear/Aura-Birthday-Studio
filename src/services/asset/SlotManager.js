@@ -14,7 +14,7 @@ export class SlotManager {
   static getSceneSlotsState(scene, allAssets = []) {
     if (!scene) return [];
 
-    const def = SceneAssetDefinitionService.getDefinition(scene.template);
+    const def = SceneAssetDefinitionService.getDefinition(scene.template, scene);
     const slots = def.slots || [];
     const sceneSlots = scene.slots || {};
 
@@ -75,7 +75,7 @@ export class SlotManager {
   static assignAssetToSlot(scene, slotId, asset, allAssets = []) {
     if (!scene || !slotId || !asset) return { success: false, error: 'Missing parameters' };
 
-    const def = SceneAssetDefinitionService.getDefinition(scene.template);
+    const def = SceneAssetDefinitionService.getDefinition(scene.template, scene);
     const slotDef = def.slots?.find(s => s.id === slotId);
 
     if (!slotDef) {

@@ -8,9 +8,15 @@ export class Scene {
   constructor(data = {}) {
     this.id = data.id || `scene_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     this.name = data.name || 'New Scene';
-    this.template = data.template || 'hero'; // hero, reveal, photo_gallery, video_showcase, memory_timeline, message, collage, fullscreen_photo, final_wish, wish-wall, universal
+    this.template = data.template || 'basic_celebration'; // basic_celebration, hero, reveal, photo_gallery, video_showcase, memory_timeline, message, collage, fullscreen_photo, final_wish, wish-wall, universal
     this.order = typeof data.order === 'number' ? data.order : 0;
     
+    // Capabilities and Asset Requirements Declarations
+    const isTextBasic = this.template === 'basic_celebration' || this.template === 'basic' || this.template === 'text' || this.template === 'blank';
+    this.capabilities = data.capabilities || (isTextBasic ? { text: true, image: false, video: false, audio: false } : { text: true, image: true, video: true, audio: true });
+    this.requiredAssets = Array.isArray(data.requiredAssets) ? data.requiredAssets : [];
+    this.optionalAssets = Array.isArray(data.optionalAssets) ? data.optionalAssets : [];
+
     // Max 15 asset IDs allowed per scene
     this.assetIds = Array.isArray(data.assetIds) ? data.assetIds.slice(0, 15) : [];
     
@@ -134,6 +140,9 @@ export class Scene {
       name: this.name,
       template: this.template,
       order: this.order,
+      capabilities: this.capabilities,
+      requiredAssets: this.requiredAssets,
+      optionalAssets: this.optionalAssets,
       assetIds: this.assetIds,
       slots: this.slots,
       media: this.media,

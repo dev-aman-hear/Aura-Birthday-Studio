@@ -27,4 +27,8 @@ export class ErrorBoundary {
       }
     };
   }
+
+  wrap(fn, context = 'Component') {
+    return ErrorBoundary.wrap(fn, context);
+  }
 }

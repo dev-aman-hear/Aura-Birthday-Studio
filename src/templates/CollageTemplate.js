@@ -32,7 +32,7 @@ export function renderCollageTemplate(scene, project, assets = []) {
       <h2 style="font-family: var(--style-heading-font); color: var(--style-text);">${renderTextElementHTML(scene, 'title', titleText, 'collage-title')}</h2>
       <div class="collage-mesh">
         ${collageImgs.map((img, idx) => `
-          <div class="collage-item collage-tilt-${(idx % 3) + 1}" data-collage-id="${img.id || `collage-item-${idx}`}">
+          <div class="collage-item collage-tilt-${(idx % 3) + 1}" data-element-id="${img.id || `collage-item-${idx}`}" data-collage-id="${img.id || `collage-item-${idx}`}">
             <img src="${img.renderUrl}" alt="Collage Photo" loading="lazy" decoding="async" />
           </div>
         `).join('')}

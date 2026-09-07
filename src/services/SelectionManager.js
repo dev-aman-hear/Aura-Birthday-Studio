@@ -8,9 +8,11 @@ export class SelectionManager {
   constructor(options = {}) {
     this.canvasViewport = options.canvasViewport || null;
     this.scene = options.scene || null;
+    this.activeSceneId = options.activeSceneId || options.scene?.id || null;
     this.onProjectModified = options.onProjectModified || (() => {});
     this.onSelectElement = options.onSelectElement || (() => {});
     this.onOpenAssetPicker = options.onOpenAssetPicker || (() => {});
+    this.onEditTextAction = options.onEditTextAction || null;
     this.selectedElementId = null;
     this.copiedElement = null;
     this.isDragging = false;
@@ -28,15 +30,21 @@ export class SelectionManager {
   }
 
   setScene(scene, viewport) {
+    const isDifferentScene = this.scene && scene && this.scene.id !== scene.id;
     this.scene = scene;
+    if (scene?.id) this.activeSceneId = scene.id;
     this.canvasViewport = viewport;
-    this.renderSelectionOverlay();
+    if (isDifferentScene) {
+      this.clearSelection();
+    } else if (this.selectedElementId) {
+      this.renderSelectionOverlay();
+    }
   }
 
   selectElement(elementId) {
     this.selectedElementId = elementId;
     this.renderSelectionOverlay();
-    this.onSelectElement(elementId);
+    this.onSelectElement(elementId, this.activeSceneId || this.scene?.id);
   }
 
   clearSelection() {
@@ -63,22 +71,51 @@ export class SelectionManager {
     const elements = this.getElementsList();
     let el = elements.find(e => e.id === this.selectedElementId);
     if (!el) {
-      const s = this.scene.settings || {};
-      const fallbackVal = s[this.selectedElementId + 'Text'] || s[this.selectedElementId] || '';
-      el = {
-        id: this.selectedElementId,
-        type: 'text',
-        name: this.selectedElementId.charAt(0).toUpperCase() + this.selectedElementId.slice(1),
-        content: fallbackVal,
-        text: fallbackVal,
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: 32,
-        fontWeight: '700',
-        color: '#ffffff',
-        visible: true
-      };
-      if (!Array.isArray(this.scene.elements)) this.scene.elements = [];
-      this.scene.elements.push(el);
+      const validFallbackIds = ['title', 'subtitle', 'badge', 'signature', 'scriptNote'];
+      if (validFallbackIds.includes(this.selectedElementId)) {
+        const s = this.scene.settings || {};
+        const fallbackVal = s[this.selectedElementId + 'Text'] || s[this.selectedElementId] || '';
+        el = {
+          id: this.selectedElementId,
+          type: 'text',
+          name: this.selectedElementId.charAt(0).toUpperCase() + this.selectedElementId.slice(1),
+          content: fallbackVal,
+          text: fallbackVal,
+          fontFamily: 'Outfit, sans-serif',
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#ffffff',
+          visible: true
+        };
+        if (!Array.isArray(this.scene.elements)) this.scene.elements = [];
+        this.scene.elements.push(el);
+      } else if (this.selectedElementId === 'photo' || this.selectedElementId === 'reveal-photo' || this.selectedElementId === 'hero_image' || this.selectedElementId === 'hero_photo' || this.selectedElementId?.startsWith('gallery-img') || this.selectedElementId?.startsWith('collage-item')) {
+        const s = this.scene.settings || {};
+        const slots = this.scene.slots || {};
+        el = {
+          id: this.selectedElementId,
+          type: 'image',
+          name: 'Photo Frame',
+          assetId: s.heroPhotoAssetId || s.photoAssetId || slots.reveal_photo || slots.hero_image,
+          url: s.revealPhotoUrl || s.heroPhotoUrl || s.photoUrl || '',
+          fit: s.imageFit || 'cover'
+        };
+        if (!Array.isArray(this.scene.elements)) this.scene.elements = [];
+        this.scene.elements.push(el);
+      } else if (this.selectedElementId === 'video' || this.selectedElementId === 'main_video') {
+        const s = this.scene.settings || {};
+        const slots = this.scene.slots || {};
+        el = {
+          id: this.selectedElementId,
+          type: 'video',
+          name: 'Video Player',
+          assetId: s.videoAssetId || slots.main_video || slots.video,
+          url: s.videoUrl || '',
+          autoplay: s.autoplay !== false
+        };
+        if (!Array.isArray(this.scene.elements)) this.scene.elements = [];
+        this.scene.elements.push(el);
+      }
     }
     return el;
   }
@@ -94,7 +131,7 @@ export class SelectionManager {
     if (!selectedEl) return;
 
     // Find DOM node matching element
-    const domNode = this.canvasViewport.querySelector(`[data-element-id="${selectedEl.id}"], [data-text-id="${selectedEl.id}"]`);
+    const domNode = this.canvasViewport.querySelector(`[data-element-id="${selectedEl.id}"], [data-text-id="${selectedEl.id}"], [data-image-id="${selectedEl.id}"], [data-slot-id="${selectedEl.id}"], [data-collage-id="${selectedEl.id}"]`);
     if (!domNode) return;
 
     const viewportRect = this.canvasViewport.getBoundingClientRect();
@@ -187,6 +224,12 @@ export class SelectionManager {
 
       if (btn.id === 'btnQuickTextEdit') {
         this.enableInlineTextEdit(domNode, selectedEl);
+        if (this.onSelectElement) {
+          this.onSelectElement(selectedEl.id, this.activeSceneId || this.scene?.id);
+        }
+        if (this.onEditTextAction) {
+          this.onEditTextAction(selectedEl.id, this.activeSceneId || this.scene?.id);
+        }
       } else if (btn.id === 'btnQuickMediaReplace') {
         this.onOpenAssetPicker(selectedEl);
       } else if (btn.id === 'btnQuickCopy') {

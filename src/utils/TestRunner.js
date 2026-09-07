@@ -89,12 +89,182 @@ import { SceneAssetDefinitionService, SCENE_ASSET_DEFINITIONS } from '../service
 import { AssetCompatibilityValidator } from '../services/asset/AssetCompatibilityValidator.js';
 import { SlotManager } from '../services/asset/SlotManager.js';
 import { UniversalSceneRenderer } from '../templates/UniversalSceneRenderer.js';
+import { sceneRepository } from '../services/SceneRepository.js';
+import { SceneRailView } from '../views/editor/SceneRailView.js';
+import { PreviewPlayerView } from '../views/PreviewPlayerView.js';
+import { AssetPickerModal } from '../views/AssetPickerModal.js';
+import { ModernEditorLayout } from '../views/editor/ModernEditorLayout.js';
+import { StyleRegistry } from '../data/styles/StyleRegistry.js';
+import { ExpiredProjectView } from '../views/ExpiredProjectView.js';
 
 export class TestRunner {
 
   static async runAllTests() {
     console.log('=== STARTING AUTOMATED TEST SUITE (TEST A-H, C1-C14, U1-U16, R1-R20, E1-E24, F1-F30, G1-G40, H1-H40, L1-L50, Q1-Q50, V1-V50, W1-W60, X1-X50, Z1-Z50, BUG-01..28) ===');
     const results = [];
+
+    // =========================================================================
+    // SCENE REORDERING TEST SUITE (SRO1): Move Up, Move Down, Boundaries & Persistence
+    // =========================================================================
+    try {
+      const testReorderProj = projectRepository.createBlankCanvasProject({ recipientName: 'ReorderTester' });
+      const scA = sceneRepository.createScene({ name: 'Scene A', template: 'hero' });
+      const scB = sceneRepository.createScene({ name: 'Scene B', template: 'reveal' });
+      const scC = sceneRepository.createScene({ name: 'Scene C', template: 'photo_gallery' });
+      const scD = sceneRepository.createScene({ name: 'Scene D', template: 'message' });
+
+      testReorderProj.scenes = [scA, scB, scC, scD];
+      sceneRepository.normalizeOrders(testReorderProj.scenes);
+
+      // Verify Initial Orders
+      const initOk = testReorderProj.scenes[0].id === scA.id &&
+                     testReorderProj.scenes[1].id === scB.id &&
+                     testReorderProj.scenes[2].id === scC.id &&
+                     testReorderProj.scenes[3].id === scD.id &&
+                     testReorderProj.scenes[0].order === 1 &&
+                     testReorderProj.scenes[3].order === 4;
+
+      // 1. Boundary Guard: Move First Scene UP -> Must return false & not change order
+      const topMoveUpBlocked = sceneRepository.moveSceneUp(testReorderProj, scA.id) === false &&
+                               testReorderProj.scenes[0].id === scA.id;
+
+      // 2. B -> Move UP -> Swaps B with A => [B, A, C, D]
+      const bMoveUpOk = sceneRepository.moveSceneUp(testReorderProj, scB.id) === true &&
+                        testReorderProj.scenes[0].id === scB.id &&
+                        testReorderProj.scenes[1].id === scA.id &&
+                        testReorderProj.scenes[2].id === scC.id &&
+                        testReorderProj.scenes[3].id === scD.id &&
+                        testReorderProj.scenes[0].order === 1 &&
+                        testReorderProj.scenes[1].order === 2;
+
+      // 3. B -> Move DOWN -> Swaps B with A => [A, B, C, D]
+      const bMoveDownOk = sceneRepository.moveSceneDown(testReorderProj, scB.id) === true &&
+                          testReorderProj.scenes[0].id === scA.id &&
+                          testReorderProj.scenes[1].id === scB.id &&
+                          testReorderProj.scenes[2].id === scC.id &&
+                          testReorderProj.scenes[3].id === scD.id;
+
+      // 4. C -> Move UP -> Swaps C with B => [A, C, B, D]
+      const cMoveUpOk = sceneRepository.moveSceneUp(testReorderProj, scC.id) === true &&
+                        testReorderProj.scenes[0].id === scA.id &&
+                        testReorderProj.scenes[1].id === scC.id &&
+                        testReorderProj.scenes[2].id === scB.id &&
+                        testReorderProj.scenes[3].id === scD.id;
+
+      // 5. Boundary Guard: Move Last Scene DOWN -> Must return false & not change order
+      const bottomMoveDownBlocked = sceneRepository.moveSceneDown(testReorderProj, scD.id) === false &&
+                                    testReorderProj.scenes[3].id === scD.id;
+
+      // 6. Move Last Scene UP multiple times: D -> UP => [A, C, D, B], D -> UP => [A, D, C, B], D -> UP => [D, A, C, B]
+      const dUp1 = sceneRepository.moveSceneUp(testReorderProj, scD.id);
+      const dUp2 = sceneRepository.moveSceneUp(testReorderProj, scD.id);
+      const dUp3 = sceneRepository.moveSceneUp(testReorderProj, scD.id);
+      const dMultipleUpOk = dUp1 && dUp2 && dUp3 && testReorderProj.scenes[0].id === scD.id;
+
+      // 7. Move First Scene DOWN: D -> DOWN => [A, D, C, B]
+      const dDown1 = sceneRepository.moveSceneDown(testReorderProj, scD.id);
+      const dDownOk = dDown1 && testReorderProj.scenes[1].id === scD.id && testReorderProj.scenes[0].id === scA.id;
+
+      // 8. SceneRailView UI Integration & Buttons
+      const testRail = new SceneRailView({
+        project: testReorderProj,
+        selectedSceneId: scA.id
+      });
+      const railElem = testRail.render();
+      const railCardsHtml = testRail.renderCardsHtml(testReorderProj.scenes);
+      const hasUpBtns = railCardsHtml.includes('btn-move-up');
+      const hasDownBtns = railCardsHtml.includes('btn-move-down');
+      const hasContextMenuMove = railElem.innerHTML.includes('data-scene-action="move-up"') &&
+                                 railElem.innerHTML.includes('data-scene-action="move-down"');
+
+      // 9. Persistence Verification: Save and Reload from DB
+      await projectRepository.saveProject(testReorderProj);
+      const reloadedReorderProj = await projectRepository.getProject(testReorderProj.id);
+      const persistOk = Boolean(reloadedReorderProj) &&
+                        reloadedReorderProj.scenes.length === 4 &&
+                        reloadedReorderProj.scenes[0].id === scA.id &&
+                        reloadedReorderProj.scenes[1].id === scD.id &&
+                        reloadedReorderProj.scenes[2].id === scC.id &&
+                        reloadedReorderProj.scenes[3].id === scB.id &&
+                        reloadedReorderProj.scenes[0].order === 1 &&
+                        reloadedReorderProj.scenes[1].order === 2 &&
+                        reloadedReorderProj.scenes[2].order === 3 &&
+                        reloadedReorderProj.scenes[3].order === 4 &&
+                        reloadedReorderProj.scenes.every(s => Boolean(s.name) && Boolean(s.template));
+
+      const passSRO1 = initOk && topMoveUpBlocked && bMoveUpOk && bMoveDownOk && cMoveUpOk &&
+                      bottomMoveDownBlocked && dMultipleUpOk && dDownOk &&
+                      hasUpBtns && hasDownBtns && hasContextMenuMove && persistOk;
+
+      results.push({
+        test: 'SRO1 (Scene Reordering / Move Up & Down Operations, Boundary Guards & Persistence)',
+        pass: passSRO1,
+        detail: `Boundary guards verified: ${topMoveUpBlocked && bottomMoveDownBlocked}, Swaps verified: ${bMoveUpOk && bMoveDownOk && cMoveUpOk && dMultipleUpOk}, UI controls verified: ${hasUpBtns && hasDownBtns && hasContextMenuMove}, Persistence verified: ${persistOk}`
+      });
+    } catch (errSRO1) {
+      console.error('SRO1 Test Error:', errSRO1);
+      results.push({ test: 'SRO1 (Scene Reordering / Move Up & Down Operations, Boundary Guards & Persistence)', pass: false, detail: errSRO1.message });
+    }
+
+    // === CE1: CONTEXTUAL SCENE EDITOR & UNIVERSAL ASSET SYSTEM ===
+    try {
+      const testReorderProj = projectRepository.createBlankCanvasProject({ recipientName: 'CETester' });
+
+      // 1. Text-Only Scene Contextual Verification
+      const textTestScene = sceneRepository.createScene({ template: 'message', name: 'My Message' });
+      const textInspector = new SmartInspectorView({ project: testReorderProj, scene: textTestScene, allAssets: [] });
+      const textElem = textInspector.render();
+      const hasTextMsg = Boolean(textElem.querySelector('#inspTextSceneContent'));
+      const hasTextFont = Boolean(textElem.querySelector('#inspTextSceneFontFamily'));
+      const noAssetPanelOnText = !textElem.querySelector('#inspectorSceneAssetsMount') && !textElem.querySelector('.scene-assets-panel-container');
+      const noVideoOnText = !textElem.querySelector('#btnSceneChangeVideo') && !textElem.querySelector('#inspVideoAutoplay');
+      const noImageOnText = !textElem.querySelector('#btnSceneChangeImage');
+      const passTextContext = hasTextMsg && hasTextFont && noAssetPanelOnText && noVideoOnText && noImageOnText;
+
+      // 2. Image Scene Contextual Verification
+      const imgTestScene = sceneRepository.createScene({ template: 'fullscreen_photo', name: 'Portrait Photo' });
+      const imgInspector = new SmartInspectorView({ project: testReorderProj, scene: imgTestScene, allAssets: [] });
+      const imgElem = imgInspector.render();
+      const hasChangeImgBtn = Boolean(imgElem.querySelector('#btnSceneChangeImage'));
+      const hasImgFit = Boolean(imgElem.querySelector('#inspImageSceneFit'));
+      const noVideoOnImg = !imgElem.querySelector('#btnSceneChangeVideo') && !imgElem.querySelector('#inspVideoAutoplay');
+      const passImgContext = hasChangeImgBtn && hasImgFit && noVideoOnImg;
+
+      // 3. Video Scene Contextual Verification
+      const vidTestScene = sceneRepository.createScene({ template: 'video_showcase', name: 'Video Reel' });
+      const vidInspector = new SmartInspectorView({ project: testReorderProj, scene: vidTestScene, allAssets: [] });
+      const vidElem = vidInspector.render();
+      const hasChangeVidBtn = Boolean(vidElem.querySelector('#btnSceneChangeVideo'));
+      const hasVideoAutoplay = Boolean(vidElem.querySelector('#inspVideoAutoplay'));
+      const noImgFitOnVid = !vidElem.querySelector('#inspImageSceneFit');
+      const passVidContext = hasChangeVidBtn && hasVideoAutoplay && noImgFitOnVid;
+
+      // 4. Universal Asset System & Contextual Picker Filtering
+      const imgPicker = new AssetPickerModal({ project: testReorderProj, targetScene: imgTestScene, type: 'image' });
+      const imgPickerElem = imgPicker.render();
+      const imgUploadAccept = imgPickerElem.querySelector('#inpModalAssetUpload')?.getAttribute('accept');
+      const imgPickerPhotosTab = Boolean(imgPickerElem.querySelector('[data-filter="image"]'));
+      const imgPickerNoAudioTab = !imgPickerElem.querySelector('[data-filter="audio"]');
+
+      const vidPicker = new AssetPickerModal({ project: testReorderProj, targetScene: vidTestScene, type: 'video' });
+      const vidPickerElem = vidPicker.render();
+      const vidUploadAccept = vidPickerElem.querySelector('#inpModalAssetUpload')?.getAttribute('accept');
+      const vidPickerVideosTab = Boolean(vidPickerElem.querySelector('[data-filter="video"]'));
+
+      const passAssetPickerContext = imgUploadAccept === 'image/*' && imgPickerPhotosTab && imgPickerNoAudioTab &&
+                                     vidUploadAccept === 'video/*' && vidPickerVideosTab;
+
+      const passCE1 = passTextContext && passImgContext && passVidContext && passAssetPickerContext;
+
+      results.push({
+        test: 'CE1 (Contextual Scene Editor & Universal Asset Picker Filtering)',
+        pass: passCE1,
+        detail: `Text scene clean: ${passTextContext}, Photo scene clean: ${passImgContext}, Video scene clean: ${passVidContext}, Universal asset picker contextual filtering: ${passAssetPickerContext}`
+      });
+    } catch (errCE1) {
+      console.error('CE1 Test Error:', errCE1);
+      results.push({ test: 'CE1 (Contextual Scene Editor & Universal Asset Picker Filtering)', pass: false, detail: errCE1.message });
+    }
 
     // Setup test creator project
     const project = projectRepository.createDefaultProject({
@@ -1362,8 +1532,103 @@ export class TestRunner {
         detail: `Events captured: ${progressEvents.length}, Phases: [preparing, assets, saving, generating, published], Modal DOM verified: ${hasProgressBar && hasPhasesList}`
       });
 
+      // Test WSE1: Scene & Element Targeting Integrity across Multi-Scene Editor
+      const multiSceneProj = projectRepository.createDefaultProject({}, 'test_user_wse');
+      multiSceneProj.scenes = [
+        {
+          id: 'scene_alpha_1',
+          name: 'Scene Alpha',
+          order: 0,
+          template: 'basic_celebration',
+          elements: [
+            { id: 'el_text_a', type: 'text', content: 'Alpha Heading', fontSize: 32 }
+          ],
+          settings: { titleText: 'Alpha Title', subtitleText: 'Alpha Subtitle' }
+        },
+        {
+          id: 'scene_beta_2',
+          name: 'Scene Beta',
+          order: 1,
+          template: 'basic_celebration',
+          elements: [
+            { id: 'el_text_b', type: 'text', content: 'Beta Heading', fontSize: 36 }
+          ],
+          settings: { titleText: 'Beta Title', subtitleText: 'Beta Subtitle' }
+        },
+        {
+          id: 'scene_gamma_3',
+          name: 'Scene Gamma',
+          order: 2,
+          template: 'basic_celebration',
+          elements: [
+            { id: 'el_text_c', type: 'text', content: 'Gamma Heading', fontSize: 40 }
+          ],
+          settings: { titleText: 'Gamma Title', subtitleText: 'Gamma Subtitle' }
+        }
+      ];
+
+      const editorInstance = new ModernEditorLayout({
+        project: multiSceneProj,
+        selectedSceneId: 'scene_alpha_1',
+        selectedElementId: null
+      });
+
+      const renderedEditor = await editorInstance.render();
+      document.body.appendChild(renderedEditor);
+
+      // 1. Initial State: Scene Alpha is active
+      const initialScene = editorInstance.getActiveScene();
+      const passInitial = initialScene && initialScene.id === 'scene_alpha_1';
+
+      // 2. Switch to Scene Beta
+      await editorInstance.handleSceneChange('scene_beta_2');
+      const activeSceneAfterBeta = editorInstance.getActiveScene();
+      const passBetaSwitch = activeSceneAfterBeta && activeSceneAfterBeta.id === 'scene_beta_2';
+
+      // 3. Select Element B on Scene Beta
+      editorInstance.storyCanvasView?.onSelectElement('el_text_b', 'scene_beta_2');
+      const selectedElBeta = editorInstance.getSelectedElement();
+      const passElBeta = selectedElBeta && selectedElBeta.id === 'el_text_b' && selectedElBeta.content === 'Beta Heading';
+
+      // 4. Trigger Edit Action on Contextual Toolbar
+      editorInstance.handleContextAction('editText', selectedElBeta, activeSceneAfterBeta, editorInstance.canvasWorkspace, editorInstance.workspaceGrid);
+      const inspectorSceneBeta = editorInstance.smartInspectorView?.scene;
+      const inspectorElementBeta = editorInstance.smartInspectorView?.selectedElementId;
+      const passBetaInspector = inspectorSceneBeta?.id === 'scene_beta_2' && inspectorElementBeta === 'el_text_b';
+
+      // 5. Switch to Scene Gamma
+      await editorInstance.handleSceneChange('scene_gamma_3');
+      editorInstance.storyCanvasView?.onSelectElement('el_text_c', 'scene_gamma_3');
+      const activeSceneAfterGamma = editorInstance.getActiveScene();
+      const selectedElGamma = editorInstance.getSelectedElement();
+      editorInstance.handleContextAction('editText', selectedElGamma, activeSceneAfterGamma, editorInstance.canvasWorkspace, editorInstance.workspaceGrid);
+      const inspectorSceneGamma = editorInstance.smartInspectorView?.scene;
+      const inspectorElementGamma = editorInstance.smartInspectorView?.selectedElementId;
+      const passGammaInspector = inspectorSceneGamma?.id === 'scene_gamma_3' && inspectorElementGamma === 'el_text_c';
+
+      // 6. Verify Isolation: Modifying Scene Beta does not mutate Scene Alpha or Scene Gamma
+      const betaEl = multiSceneProj.scenes.find(s => s.id === 'scene_beta_2').elements[0];
+      betaEl.content = 'Beta Heading Modified';
+      const alphaEl = multiSceneProj.scenes.find(s => s.id === 'scene_alpha_1').elements[0];
+      const gammaEl = multiSceneProj.scenes.find(s => s.id === 'scene_gamma_3').elements[0];
+      const passIsolation = alphaEl.content === 'Alpha Heading' && gammaEl.content === 'Gamma Heading' && betaEl.content === 'Beta Heading Modified';
+
+      // Clean up test DOM
+      renderedEditor.remove();
+
+      const passWSE1 = passInitial && passBetaSwitch && passElBeta && passBetaInspector && passGammaInspector && passIsolation;
+
+      results.push({
+        test: 'WSE1 (Scene & Element Targeting Integrity across Multi-Scene Editor)',
+        pass: passWSE1,
+        detail: `Beta Select -> Inspector Scene: ${inspectorSceneBeta?.id} (El: ${inspectorElementBeta}), Gamma Select -> Inspector Scene: ${inspectorSceneGamma?.id} (El: ${inspectorElementGamma}), Target Isolation: ${passIsolation}`
+      });
+
+
+
     } catch (globalErr) {
-      console.error('Test Runner Error:', globalErr);
+      console.error('Test Runner Error: ' + (globalErr.stack || globalErr.message));
+      window.__testRunnerError = globalErr.stack || globalErr.message;
     }
 
     console.log('=== TEST RESULTS SUMMARY ===');

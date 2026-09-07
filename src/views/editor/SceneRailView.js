@@ -45,16 +45,29 @@ export class SceneRailView {
     }
   }
 
+  getScenes() {
+    return (this.project.scenes || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+
   renderCardsHtml(scenes) {
-    return scenes.map((scene, idx) => {
+    const list = scenes || this.getScenes();
+    return list.map((scene, idx) => {
       const isActive = scene.id === this.selectedSceneId;
       const icon = this.getSceneIcon(scene);
+      const isFirst = idx === 0;
+      const isLast = idx === list.length - 1;
       return `
         <div class="rail-scene-card ${isActive ? 'active' : ''}" data-scene-id="${scene.id}" draggable="true" title="${scene.name || `Scene ${idx + 1}`}">
-          <span class="rail-scene-num">${String(idx + 1).padStart(2, '0')}</span>
+          <div class="rail-scene-card-top">
+            <span class="rail-scene-num">${String(idx + 1).padStart(2, '0')}</span>
+            <div class="rail-scene-reorder-btns">
+              <button class="rail-reorder-btn btn-move-up" data-scene-id="${scene.id}" data-action="move-up" title="Move Up" ${isFirst ? 'disabled' : ''}>▲</button>
+              <button class="rail-reorder-btn btn-move-down" data-scene-id="${scene.id}" data-action="move-down" title="Move Down" ${isLast ? 'disabled' : ''}>▼</button>
+            </div>
+            <button class="rail-scene-more-btn" data-scene-menu="${scene.id}" title="Scene options">⋯</button>
+          </div>
           <div class="rail-scene-preview-icon">${icon}</div>
           <span class="rail-scene-duration">${scene.duration || 5}s</span>
-          <button class="rail-scene-more-btn" data-scene-menu="${scene.id}" title="Scene options">⋯</button>
         </div>
       `;
     }).join('') + `
@@ -66,11 +79,18 @@ export class SceneRailView {
   }
 
   renderMobileCardsHtml(scenes) {
-    return scenes.map((scene, idx) => {
+    const list = scenes || this.getScenes();
+    return list.map((scene, idx) => {
       const isActive = scene.id === this.selectedSceneId;
+      const isFirst = idx === 0;
+      const isLast = idx === list.length - 1;
       return `
         <div class="mobile-filmstrip-card ${isActive ? 'active' : ''}" data-scene-id="${scene.id}">
-          ${String(idx + 1).padStart(2, '0')}
+          <div style="font-weight:800; font-size:0.75rem;">${String(idx + 1).padStart(2, '0')}</div>
+          <div class="mobile-scene-reorder-btns" style="display:flex; gap:2px; margin-top:2px;">
+            <button class="mobile-reorder-btn btn-move-up" data-scene-id="${scene.id}" data-action="move-up" title="Move Up" ${isFirst ? 'disabled' : ''} style="border:none; background:rgba(255,255,255,0.1); color:#fff; font-size:0.55rem; padding:1px 3px; border-radius:2px; cursor:${isFirst ? 'not-allowed' : 'pointer'}; opacity:${isFirst ? '0.3' : '1'};">◀</button>
+            <button class="mobile-reorder-btn btn-move-down" data-scene-id="${scene.id}" data-action="move-down" title="Move Down" ${isLast ? 'disabled' : ''} style="border:none; background:rgba(255,255,255,0.1); color:#fff; font-size:0.55rem; padding:1px 3px; border-radius:2px; cursor:${isLast ? 'not-allowed' : 'pointer'}; opacity:${isLast ? '0.3' : '1'};">▶</button>
+          </div>
         </div>
       `;
     }).join('') + `
@@ -81,7 +101,7 @@ export class SceneRailView {
   }
 
   render() {
-    const scenes = (this.project.scenes || []).sort((a, b) => a.order - b.order);
+    const scenes = this.getScenes();
 
     if (this.isMobile) {
       return this.renderMobileFilmstrip(scenes);
@@ -101,7 +121,14 @@ export class SceneRailView {
       </div>
 
       <!-- Floating Scene Context Menu -->
-      <div class="rail-scene-context-menu" id="railSceneContextMenu" style="display:none; position:fixed; background:var(--surface-elevated, #1c1830); border:1px solid var(--border, rgba(255,255,255,0.15)); border-radius:var(--radius-md, 10px); box-shadow:0 12px 32px rgba(0,0,0,0.6); padding:6px; z-index:500; min-width:150px; flex-direction:column; gap:2px;">
+      <div class="rail-scene-context-menu" id="railSceneContextMenu" style="display:none; position:fixed; background:var(--surface-elevated, #1c1830); border:1px solid var(--border, rgba(255,255,255,0.15)); border-radius:var(--radius-md, 10px); box-shadow:0 12px 32px rgba(0,0,0,0.6); padding:6px; z-index:500; min-width:160px; flex-direction:column; gap:2px;">
+        <button class="more-menu-item" data-scene-action="move-up">
+          <span>⬆️</span> <span>Move Up</span>
+        </button>
+        <button class="more-menu-item" data-scene-action="move-down">
+          <span>⬇️</span> <span>Move Down</span>
+        </button>
+        <div style="height:1px; background:var(--border, rgba(255,255,255,0.1)); margin:3px 0;"></div>
         <button class="more-menu-item" data-scene-action="duplicate">
           <span>📋</span> <span>Duplicate</span>
         </button>
@@ -130,6 +157,26 @@ export class SceneRailView {
     strip.innerHTML = this.renderMobileCardsHtml(scenes);
 
     strip.addEventListener('click', (e) => {
+      const moveBtn = e.target.closest('.mobile-reorder-btn');
+      if (moveBtn) {
+        e.stopPropagation();
+        if (moveBtn.disabled) return;
+        const sceneId = moveBtn.dataset.sceneId;
+        const action = moveBtn.dataset.action;
+        if (action === 'move-up') {
+          const success = sceneRepository.moveSceneUp(this.project, sceneId);
+          if (success) {
+            this.onProjectModified();
+          }
+        } else if (action === 'move-down') {
+          const success = sceneRepository.moveSceneDown(this.project, sceneId);
+          if (success) {
+            this.onProjectModified();
+          }
+        }
+        return;
+      }
+
       const card = e.target.closest('[data-scene-id]');
       if (card) {
         const sceneId = card.dataset.sceneId;
@@ -159,18 +206,58 @@ export class SceneRailView {
     return '✨';
   }
 
-  attachDesktopEvents(rail, scenes) {
+  attachDesktopEvents(rail) {
     const contextMenu = rail.querySelector('#railSceneContextMenu');
 
-    // 1. Click to select scene or open scene menu
+    // 1. Click to select scene, reorder scene, or open scene menu
     rail.addEventListener('click', (e) => {
+      // Direct Move Up / Move Down on Card
+      const moveBtn = e.target.closest('.rail-reorder-btn');
+      if (moveBtn) {
+        e.stopPropagation();
+        if (moveBtn.disabled) return;
+        const sceneId = moveBtn.dataset.sceneId;
+        const action = moveBtn.dataset.action;
+        if (action === 'move-up') {
+          const success = sceneRepository.moveSceneUp(this.project, sceneId);
+          if (success) {
+            this.onProjectModified();
+          }
+        } else if (action === 'move-down') {
+          const success = sceneRepository.moveSceneDown(this.project, sceneId);
+          if (success) {
+            this.onProjectModified();
+          }
+        }
+        return;
+      }
+
       const menuBtn = e.target.closest('[data-scene-menu]');
       if (menuBtn) {
         e.stopPropagation();
         const sceneId = menuBtn.dataset.sceneMenu;
         this.activeMenuSceneId = sceneId;
-        const rect = menuBtn.getBoundingClientRect();
+
+        const scenes = this.getScenes();
+        const curIdx = scenes.findIndex(s => s.id === sceneId);
+
         if (contextMenu) {
+          const upBtn = contextMenu.querySelector('[data-scene-action="move-up"]');
+          const downBtn = contextMenu.querySelector('[data-scene-action="move-down"]');
+          if (upBtn) {
+            const isTop = curIdx <= 0;
+            upBtn.disabled = isTop;
+            upBtn.style.opacity = isTop ? '0.35' : '1';
+            upBtn.style.pointerEvents = isTop ? 'none' : 'auto';
+          }
+          if (downBtn) {
+            const isBottom = (curIdx === -1 || curIdx >= scenes.length - 1);
+            downBtn.disabled = isBottom;
+            downBtn.style.opacity = isBottom ? '0.35' : '1';
+            downBtn.style.pointerEvents = isBottom ? 'none' : 'auto';
+          }
+
+          const rect = menuBtn.getBoundingClientRect();
           contextMenu.style.display = 'flex';
           contextMenu.style.left = `${rect.right + 6}px`;
           contextMenu.style.top = `${rect.top}px`;
@@ -212,10 +299,23 @@ export class SceneRailView {
         contextMenu.style.display = 'none';
         this.activeMenuSceneId = null;
 
+        const scenes = this.getScenes();
         const targetScene = scenes.find(s => s.id === sceneId);
         if (!targetScene) return;
 
-        if (action === 'duplicate') {
+        if (action === 'move-up') {
+          const success = sceneRepository.moveSceneUp(this.project, sceneId);
+          if (success) {
+            this.onProjectModified();
+            Toast.show('Scene moved up', 'info');
+          }
+        } else if (action === 'move-down') {
+          const success = sceneRepository.moveSceneDown(this.project, sceneId);
+          if (success) {
+            this.onProjectModified();
+            Toast.show('Scene moved down', 'info');
+          }
+        } else if (action === 'duplicate') {
           const clone = sceneRepository.duplicateScene(this.project, sceneId);
           if (clone) {
             this.selectedSceneId = clone.id;
@@ -280,13 +380,11 @@ export class SceneRailView {
       if (targetCard && draggedId) {
         const targetId = targetCard.dataset.sceneId;
         if (draggedId !== targetId) {
+          const scenes = this.getScenes();
           const fromIdx = scenes.findIndex(s => s.id === draggedId);
           const toIdx = scenes.findIndex(s => s.id === targetId);
           if (fromIdx !== -1 && toIdx !== -1) {
-            const [moved] = scenes.splice(fromIdx, 1);
-            scenes.splice(toIdx, 0, moved);
-            scenes.forEach((s, i) => { s.order = i + 1; });
-            this.project.scenes = scenes;
+            sceneRepository.reorderScenes(this.project, fromIdx, toIdx);
             this.onProjectModified();
           }
         }

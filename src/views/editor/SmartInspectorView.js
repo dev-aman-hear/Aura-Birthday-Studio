@@ -9,7 +9,7 @@ import { CountdownStyleRegistry } from '../../data/styles/CountdownStyleDefiniti
 import { CountdownService } from '../../services/CountdownService.js';
 import { StyleRegistry } from '../../data/styles/StyleRegistry.js';
 import { SceneAssetsPanel } from './SceneAssetsPanel.js';
-import { getOrCreateTextElements } from '../../templates/TextElementHelper.js';
+import { getOrCreateTextElements, updateTextElement } from '../../templates/TextElementHelper.js';
 import { AssetPickerModal } from '../AssetPickerModal.js';
 import { SAMPLE_ASSETS } from '../../data/SampleData.js';
 import { resolveGiftContent } from '../../animations/SpecialAnimationEngine.js';
@@ -17,6 +17,9 @@ import { resolveGiftContent } from '../../animations/SpecialAnimationEngine.js';
 export class SmartInspectorView {
   constructor(options = {}) {
     this.project = options.project || {};
+    this.activeSceneId = options.activeSceneId || options.selectedSceneId || options.scene?.id || null;
+    this.selectedSceneId = this.activeSceneId;
+    this.selectedElementSceneId = options.selectedElementSceneId || this.activeSceneId;
     this.scene = options.scene || null;
     this.allAssets = options.allAssets || [];
     this.selectedElementId = options.selectedElementId || null;
@@ -219,18 +222,68 @@ export class SmartInspectorView {
     return this.scene?.lockedLayout !== false;
   }
 
-  getElementsList() {
-    if (!this.scene) return [];
-    if (Array.isArray(this.scene.elements) && this.scene.elements.length > 0) {
-      return this.scene.elements;
+  resolveSelectedElement() {
+    let targetScene = null;
+    const targetSceneId = this.activeSceneId || this.selectedSceneId;
+    if (targetSceneId && this.project?.scenes?.length) {
+      targetScene = this.project.scenes.find(s => s.id === targetSceneId) || null;
     }
-    if (Array.isArray(this.scene.textElements) && this.scene.textElements.length > 0) {
-      this.scene.elements = this.scene.textElements;
-      return this.scene.elements;
+    if (!targetScene && this.scene && this.project?.scenes?.length) {
+      targetScene = this.project.scenes.find(s => s.id === this.scene.id) || null;
     }
-    const defaultTexts = getOrCreateTextElements(this.scene);
-    this.scene.elements = defaultTexts;
-    return this.scene.elements;
+    if (!targetScene) {
+      targetScene = this.scene || null;
+    }
+
+    this.scene = targetScene;
+
+    if (!targetScene || !this.selectedElementId) {
+      return { scene: targetScene, element: null };
+    }
+
+    const elementSceneId = this.selectedElementSceneId || targetSceneId;
+    const elScene = (elementSceneId && this.project?.scenes?.find(s => s.id === elementSceneId)) || targetScene;
+    const elements = this.getElementsList(elScene);
+    let activeEl = elements.find(e => e.id === this.selectedElementId) || null;
+    if (!activeEl && targetScene) {
+      const s = targetScene.settings || {};
+      const slots = targetScene.slots || {};
+      if (this.selectedElementId === 'photo' || this.selectedElementId === 'reveal-photo' || this.selectedElementId === 'hero_image' || this.selectedElementId === 'hero_photo' || this.selectedElementId?.startsWith('gallery-img') || this.selectedElementId?.startsWith('collage-item')) {
+        activeEl = {
+          id: this.selectedElementId,
+          type: 'image',
+          name: 'Scene Photo',
+          assetId: s.heroPhotoAssetId || s.photoAssetId || slots.reveal_photo || slots.hero_image,
+          url: s.revealPhotoUrl || s.heroPhotoUrl || s.photoUrl || '',
+          fit: s.imageFit || 'cover'
+        };
+      } else if (this.selectedElementId === 'video' || this.selectedElementId === 'main_video') {
+        activeEl = {
+          id: this.selectedElementId,
+          type: 'video',
+          name: 'Scene Video',
+          assetId: s.videoAssetId || slots.main_video || slots.video,
+          url: s.videoUrl || '',
+          autoplay: s.autoplay !== false
+        };
+      }
+    }
+    return { scene: targetScene, element: activeEl };
+  }
+
+  getElementsList(targetScene = this.scene) {
+    const sc = targetScene || this.scene;
+    if (!sc) return [];
+    if (Array.isArray(sc.elements) && sc.elements.length > 0) {
+      return sc.elements;
+    }
+    if (Array.isArray(sc.textElements) && sc.textElements.length > 0) {
+      sc.elements = sc.textElements;
+      return sc.elements;
+    }
+    const defaultTexts = getOrCreateTextElements(sc);
+    sc.elements = defaultTexts;
+    return sc.elements;
   }
 
   render() {
@@ -238,7 +291,9 @@ export class SmartInspectorView {
     inspector.className = 'modern-smart-inspector';
     inspector.id = 'modernSmartInspector';
 
-    if (!this.scene) {
+    const { scene, element: activeEl } = this.resolveSelectedElement();
+
+    if (!scene) {
       inspector.innerHTML = `
         <div style="padding: 24px; text-align: center; color: var(--text-muted);">
           <p>Select a scene to view properties.</p>
@@ -247,8 +302,7 @@ export class SmartInspectorView {
       return inspector;
     }
 
-    const elements = this.getElementsList();
-    const activeEl = elements.find(e => e.id === this.selectedElementId) || null;
+    const elements = this.getElementsList(scene);
 
     inspector.innerHTML = `
       <!-- Header -->
@@ -272,7 +326,10 @@ export class SmartInspectorView {
 
       <!-- Inspector Body -->
       <div class="inspector-body" id="inspectorBodyContainer">
-        ${activeEl ? this.renderActiveElementControls(activeEl) : this.renderSceneDefaultControls()}
+        ${activeEl ? `
+          ${this.renderActiveElementControls(activeEl)}
+          ${this.renderSceneTimingSection()}
+        ` : this.renderSceneDefaultControls(scene)}
       </div>
     `;
 
@@ -280,7 +337,7 @@ export class SmartInspectorView {
     if (assetsMount) {
       const panel = new SceneAssetsPanel({
         project: this.project,
-        scene: this.scene,
+        scene: scene,
         allAssets: this.allAssets,
         onProjectModified: () => this.onProjectModified(),
         onOpenAssetPicker: (el) => this.onOpenAssetPicker(el)
@@ -292,10 +349,47 @@ export class SmartInspectorView {
     return inspector;
   }
 
+  getSceneKind(scene = this.scene) {
+    if (!scene) return 'text';
+    const t = (scene.template || '').toLowerCase();
+    if (t === 'basic_celebration' || t === 'basic' || t === 'text') return 'text';
+    if (t === 'wish_wall' || t === 'wish-wall') return 'wish_wall';
+    if (t === 'video_showcase' || t === 'video') return 'video';
+    if (t === 'photo_gallery' || t === 'collage' || t === 'memory_timeline') return 'gallery';
+    if (t === 'fullscreen_photo') return 'image';
+    if (t === 'hero') {
+      const hasPhoto = scene.slots?.hero_image || scene.slots?.hero_photo || scene.settings?.heroPhotoAssetId || scene.settings?.photoAssetId || (Array.isArray(scene.assetIds) && scene.assetIds.length > 0 && scene.name !== 'New Scene');
+      return hasPhoto ? 'image' : 'text';
+    }
+    if (t.startsWith('special_')) return 'special';
+    if (t === 'message' || t === 'reveal' || t === 'final_wish' || t === 'quote') return 'text';
+    if (t === 'universal' || t === 'blank' || t === 'custom') {
+      const elements = scene.elements || scene.textElements || [];
+      if (elements.some(e => e.type === 'video')) return 'video';
+      if (elements.some(e => e.type === 'image' || e.type === 'photo')) return 'image';
+      return 'text';
+    }
+
+    // Check elements or slots fallback
+    const elements = scene.elements || scene.textElements || [];
+    if (elements.some(e => e.type === 'video') || scene.slots?.main_video || scene.slots?.video) return 'video';
+    if (elements.some(e => e.type === 'image' || e.type === 'photo') || (scene.slots?.hero_image && scene.name !== 'New Scene') || scene.slots?.primaryPhoto) return 'image';
+    return 'text';
+  }
+
   getHeaderIcon(activeEl) {
     if (!activeEl) {
-      if (this.scene?.template === 'wish_wall' || this.scene?.template === 'wish-wall') return '💌';
-      return '⚙️';
+      const kind = this.getSceneKind();
+      switch (kind) {
+        case 'text': return '🔤';
+        case 'image': return '🖼️';
+        case 'video': return '🎬';
+        case 'gallery': return '🖼️';
+        case 'wish_wall': return '💌';
+        case 'universal': return '🎨';
+        case 'special': return '✨';
+        default: return '⚙️';
+      }
     }
     const t = (activeEl.type || 'text').toLowerCase();
     if (t === 'text') return '🔤';
@@ -308,8 +402,17 @@ export class SmartInspectorView {
 
   getHeaderTitle(activeEl) {
     if (!activeEl) {
-      if (this.scene?.template === 'wish_wall' || this.scene?.template === 'wish-wall') return 'Wish Wall Properties';
-      return 'Scene Settings';
+      const kind = this.getSceneKind();
+      switch (kind) {
+        case 'text': return 'Scene Settings';
+        case 'image': return 'Photo Scene Settings';
+        case 'video': return 'Video Scene Settings';
+        case 'gallery': return 'Gallery & Collage Settings';
+        case 'wish_wall': return 'Wish Wall Settings';
+        case 'universal': return 'Canvas Scene Settings';
+        case 'special': return 'Story Animation Settings';
+        default: return 'Scene Settings';
+      }
     }
     const t = (activeEl.type || 'text').toUpperCase();
     return `${t} Properties`;
@@ -350,13 +453,13 @@ export class SmartInspectorView {
         <div class="form-group" style="margin-bottom:8px;">
           <label style="font-size:0.75rem;">Font Family</label>
           <select class="form-input" id="inspFontFamily">
-            <option value="'Playfair Display', serif" ${el.fontFamily?.includes('Playfair') ? 'selected' : ''}>Playfair Display (Luxury)</option>
-            <option value="'Outfit', sans-serif" ${el.fontFamily?.includes('Outfit') ? 'selected' : ''}>Outfit (Modern)</option>
-            <option value="'Cinzel', serif" ${el.fontFamily?.includes('Cinzel') ? 'selected' : ''}>Cinzel (Cinematic)</option>
-            <option value="'Poppins', sans-serif" ${el.fontFamily?.includes('Poppins') ? 'selected' : ''}>Poppins (Friendly)</option>
-            <option value="'Montserrat', sans-serif" ${el.fontFamily?.includes('Montserrat') ? 'selected' : ''}>Montserrat (Bold)</option>
-            <option value="'Pacifico', cursive" ${el.fontFamily?.includes('Pacifico') ? 'selected' : ''}>Pacifico (Handwritten)</option>
-            <option value="'Inter', sans-serif" ${el.fontFamily?.includes('Inter') || !el.fontFamily ? 'selected' : ''}>Inter (Clean)</option>
+            <option value="'Playfair Display', serif" ${(el.fontFamily || '').toLowerCase().includes('playfair') ? 'selected' : ''}>Playfair Display (Luxury)</option>
+            <option value="'Outfit', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('outfit') ? 'selected' : ''}>Outfit (Modern)</option>
+            <option value="'Cinzel', serif" ${(el.fontFamily || '').toLowerCase().includes('cinzel') ? 'selected' : ''}>Cinzel (Cinematic)</option>
+            <option value="'Poppins', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('poppins') ? 'selected' : ''}>Poppins (Friendly)</option>
+            <option value="'Montserrat', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('montserrat') ? 'selected' : ''}>Montserrat (Bold)</option>
+            <option value="'Pacifico', cursive" ${(el.fontFamily || '').toLowerCase().includes('pacifico') ? 'selected' : ''}>Pacifico (Handwritten)</option>
+            <option value="'Inter', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('inter') || (!(el.fontFamily || '').toLowerCase().includes('playfair') && !(el.fontFamily || '').toLowerCase().includes('outfit') && !(el.fontFamily || '').toLowerCase().includes('cinzel') && !(el.fontFamily || '').toLowerCase().includes('poppins') && !(el.fontFamily || '').toLowerCase().includes('montserrat') && !(el.fontFamily || '').toLowerCase().includes('pacifico')) ? 'selected' : ''}>Inter (Clean)</option>
           </select>
         </div>
 
@@ -1370,87 +1473,571 @@ export class SmartInspectorView {
     `;
   }
 
+  resolveCurrentSceneMedia(type = 'image') {
+    const s = this.scene.settings || {};
+    const slots = this.scene.slots || {};
+    const elements = this.getElementsList();
+
+    if (type === 'image') {
+      const assetId = s.heroPhotoAssetId || s.photoAssetId || slots.hero_image || slots.hero_photo || slots.primaryPhoto || slots.photo ||
+        elements.find(e => e.type === 'image' || e.type === 'photo')?.assetId ||
+        this.scene.assetIds?.find(id => {
+          const a = (this.allAssets || []).find(x => x.id === id);
+          return a && (a.type === 'image' || a.type === 'sticker');
+        });
+
+      if (assetId) {
+        const found = (this.allAssets || []).find(a => a.id === assetId) ||
+                      (this.project?.assets || []).find(a => a.id === assetId) ||
+                      SAMPLE_ASSETS.find(a => a.id === assetId);
+        if (found) {
+          return {
+            url: found.renderUrl || found.thumbnail || found.url || '',
+            name: found.name || 'Selected Photo Asset',
+            detail: (found.metadata?.fileFormat || found.type || 'IMAGE').toUpperCase(),
+            assetId: found.id
+          };
+        }
+      }
+
+      // External URL
+      const extUrl = s.heroPhotoUrl || s.photoUrl || elements.find(e => e.type === 'image')?.url;
+      if (extUrl && typeof extUrl === 'string' && extUrl.trim()) {
+        return {
+          url: extUrl.trim(),
+          name: 'External Image',
+          detail: 'Web Photo',
+          assetId: null
+        };
+      }
+
+      return {
+        url: '',
+        name: 'No photo selected',
+        detail: 'Click "Change Photo" to select or upload',
+        assetId: null
+      };
+    }
+
+    if (type === 'video') {
+      const assetId = s.videoAssetId || slots.main_video || slots.video ||
+        elements.find(e => e.type === 'video')?.assetId ||
+        this.scene.assetIds?.find(id => {
+          const a = (this.allAssets || []).find(x => x.id === id);
+          return a && a.type === 'video';
+        });
+
+      if (assetId) {
+        const found = (this.allAssets || []).find(a => a.id === assetId) ||
+                      (this.project?.assets || []).find(a => a.id === assetId) ||
+                      SAMPLE_ASSETS.find(a => a.id === assetId);
+        if (found) {
+          return {
+            url: found.renderUrl || found.thumbnail || found.url || '',
+            name: found.name || 'Selected Video Asset',
+            detail: (found.metadata?.fileFormat || 'MP4').toUpperCase(),
+            assetId: found.id
+          };
+        }
+      }
+
+      const extUrl = s.videoUrl || elements.find(e => e.type === 'video')?.url;
+      if (extUrl && typeof extUrl === 'string' && extUrl.trim()) {
+        return {
+          url: extUrl.trim(),
+          name: 'External Video',
+          detail: 'Web Video',
+          assetId: null
+        };
+      }
+
+      return {
+        url: '',
+        name: 'No video selected',
+        detail: 'Click "Change Video" to select or upload',
+        assetId: null
+      };
+    }
+
+    return { url: '', name: '', detail: '', assetId: null };
+  }
+
+  resolveGallerySlots() {
+    const slots = [];
+    const def = SceneAssetDefinitionService.getDefinition(this.scene.template);
+    const defSlots = def?.slots?.filter(s => (s.acceptedTypes || []).includes('image')) || [];
+
+    if (defSlots.length > 0) {
+      defSlots.forEach(ds => {
+        const assetId = this.scene.slots?.[ds.id];
+        let found = assetId ? ((this.allAssets || []).find(a => a.id === assetId) || (this.project?.assets || []).find(a => a.id === assetId) || SAMPLE_ASSETS.find(a => a.id === assetId)) : null;
+        slots.push({
+          id: ds.id,
+          title: ds.name || 'Photo Slot',
+          name: found?.name || (assetId ? 'Assigned Asset' : 'Empty Slot'),
+          url: found?.renderUrl || found?.thumbnail || found?.url || '',
+          assetId: assetId || null
+        });
+      });
+      return slots;
+    }
+
+    const assetIds = (this.scene.assetIds || []).filter(id => {
+      const a = (this.allAssets || []).find(x => x.id === id);
+      return !a || a.type === 'image' || a.type === 'sticker';
+    });
+
+    const totalCount = Math.max(3, assetIds.length);
+    for (let i = 0; i < totalCount; i++) {
+      const aId = assetIds[i];
+      let found = aId ? ((this.allAssets || []).find(a => a.id === aId) || (this.project?.assets || []).find(a => a.id === aId) || SAMPLE_ASSETS.find(a => a.id === aId)) : null;
+      slots.push({
+        id: `gallery_photo_${i + 1}`,
+        title: `Photo ${i + 1}`,
+        name: found?.name || (aId ? 'Assigned Asset' : 'Empty Slot'),
+        url: found?.renderUrl || found?.thumbnail || found?.url || '',
+        assetId: aId || null
+      });
+    }
+    return slots;
+  }
+
   renderSceneDefaultControls() {
-    const isSpecial = (this.scene.template || '').startsWith('special_');
-    const isWishWall = this.scene.template === 'wish_wall' || this.scene.template === 'wish-wall';
-    const animConfig = this.scene.settings?.animationConfig || {};
+    const kind = this.getSceneKind();
+    switch (kind) {
+      case 'text':
+        return this.renderContextualTextSceneControls();
+      case 'image':
+        return this.renderContextualImageSceneControls();
+      case 'video':
+        return this.renderContextualVideoSceneControls();
+      case 'gallery':
+        return this.renderContextualGallerySceneControls();
+      case 'wish_wall':
+        return this.renderContextualWishWallSceneControls();
+      case 'universal':
+        return this.renderContextualUniversalSceneControls();
+      case 'special':
+        return this.renderContextualSpecialSceneControls();
+      default:
+        return this.renderContextualTextSceneControls();
+    }
+  }
+
+  renderContextualTextSceneControls() {
+    const s = this.scene.settings || {};
+    const elements = this.getElementsList();
+    const titleEl = elements.find(e => e.id === 'title' || e.role === 'title');
+    const msgEl = elements.find(e => e.id === 'subtitle' || e.id === 'message' || e.role === 'body' || e.role === 'subtitle') || elements[0];
+    
+    const titleVal = s.titleText || s.title || titleEl?.content || '';
+    const msgVal = s.messageText || s.textContent || s.subtitleText || msgEl?.content || '';
+    const fontFamily = s.fontFamily || msgEl?.fontFamily || "'Playfair Display', serif";
+    const fontSize = parseInt(s.fontSize || msgEl?.fontSize || 28, 10);
+    const fontWeight = s.fontWeight || msgEl?.fontWeight || 400;
+    const textAlign = s.textAlign || msgEl?.textAlign || msgEl?.align || 'center';
+    const textColor = s.textColor || msgEl?.color || '#ffffff';
+    const bgColor = s.bgColor || '#1a162b';
 
     return `
-      <!-- Prominent Scene Assets & Requirements Panel -->
       <div class="inspector-section" style="padding-top:0;">
-        <div id="inspectorSceneAssetsMount"></div>
+        <div class="inspector-section-title">Scene Text & Content</div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">Title / Headline</label>
+          <input type="text" class="form-input" id="inspTextSceneTitle" value="${titleVal}" placeholder="e.g. A Heartfelt Wish..." />
+        </div>
+        <div class="form-group">
+          <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">Subtitle / Message Content</label>
+          <textarea class="form-input" id="inspTextSceneContent" rows="4" style="width:100%; resize:vertical;" placeholder="Write your personal message...">${msgVal}</textarea>
+          <span style="font-size:0.68rem; color:var(--text-muted); margin-top:2px; display:block;">Supports: {{recipientName}}, {{senderName}}, {{age}}</span>
+        </div>
       </div>
 
-      ${isWishWall ? this.renderWishWallControls() : ''}
-      ${isSpecial ? this.renderSpecialSceneControls() : ''}
-      ${(!isSpecial && !isWishWall) ? this.renderStandardSceneElementsControls() : ''}
-
-      ${isSpecial ? `
-        <!-- Special Animation Settings -->
-        <div class="inspector-section" style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:12px;">
-          <div class="inspector-section-title" style="color:var(--accent, #a78bfa); display:flex; align-items:center; gap:6px;">
-            <span>🎬</span> <span>Animation Controls</span>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label style="font-size:0.75rem;">Duration / Speed</label>
-              <select class="form-input" id="inspSpecialAnimDuration">
-                <option value="1.5" ${animConfig.duration === 1.5 ? 'selected' : ''}>Fast (1.5s)</option>
-                <option value="2.5" ${animConfig.duration === 2.5 || !animConfig.duration ? 'selected' : ''}>Standard (2.5s)</option>
-                <option value="4.0" ${animConfig.duration === 4.0 ? 'selected' : ''}>Cinematic (4.0s)</option>
-                <option value="6.0" ${animConfig.duration === 6.0 ? 'selected' : ''}>Slow Paced (6.0s)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label style="font-size:0.75rem;">Delay</label>
-              <select class="form-input" id="inspSpecialAnimDelay">
-                <option value="0" ${!animConfig.delay ? 'selected' : ''}>Instant (0s)</option>
-                <option value="0.3" ${animConfig.delay === 0.3 ? 'selected' : ''}>Short (0.3s)</option>
-                <option value="0.8" ${animConfig.delay === 0.8 ? 'selected' : ''}>Dramatic (0.8s)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label style="font-size:0.75rem;">Easing Dynamics</label>
-              <select class="form-input" id="inspSpecialAnimEase">
-                <option value="power2.out" ${animConfig.ease === 'power2.out' || !animConfig.ease ? 'selected' : ''}>Smooth Decel</option>
-                <option value="back.out(1.6)" ${animConfig.ease === 'back.out(1.6)' ? 'selected' : ''}>Spring Bounce</option>
-                <option value="sine.inOut" ${animConfig.ease === 'sine.inOut' ? 'selected' : ''}>Sine Breath</option>
-                <option value="none" ${animConfig.ease === 'none' ? 'selected' : ''}>Linear</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label style="font-size:0.75rem;">Particle Intensity</label>
-              <select class="form-input" id="inspSpecialAnimIntensity">
-                <option value="standard" ${animConfig.intensity === 'standard' || !animConfig.intensity ? 'selected' : ''}>Standard</option>
-                <option value="dense" ${animConfig.intensity === 'dense' ? 'selected' : ''}>High Density</option>
-                <option value="subtle" ${animConfig.intensity === 'subtle' ? 'selected' : ''}>Subtle</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      ` : ''}
-
-      <!-- Scene Configuration & Timing Settings -->
-      <div class="inspector-section" style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:12px;">
-        <div class="inspector-section-title">Scene Settings & Timing</div>
-        <div class="form-group">
-          <label style="font-size:0.75rem;">Scene Name</label>
-          <input type="text" class="form-input" id="inspSceneName" value="${this.scene.name || 'Scene'}" />
+      <div class="inspector-section">
+        <div class="inspector-section-title">Typography & Styling</div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Font Style</label>
+          <select class="form-input" id="inspTextSceneFontFamily">
+            <option value="'Playfair Display', serif" ${fontFamily.includes('Playfair') ? 'selected' : ''}>Playfair Display (Luxury & Elegant)</option>
+            <option value="'Outfit', sans-serif" ${fontFamily.includes('Outfit') ? 'selected' : ''}>Outfit (Modern & Clean)</option>
+            <option value="'Cinzel', serif" ${fontFamily.includes('Cinzel') ? 'selected' : ''}>Cinzel (Cinematic & Grand)</option>
+            <option value="'Poppins', sans-serif" ${fontFamily.includes('Poppins') ? 'selected' : ''}>Poppins (Friendly & Warm)</option>
+            <option value="'Pacifico', cursive" ${fontFamily.includes('Pacifico') ? 'selected' : ''}>Pacifico (Handwritten Flourish)</option>
+            <option value="'Inter', sans-serif" ${fontFamily.includes('Inter') ? 'selected' : ''}>Inter (Minimalist)</option>
+          </select>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label style="font-size:0.75rem;">Duration (s)</label>
+            <label style="font-size:0.72rem; color:var(--text-muted);">Size (px)</label>
+            <input type="number" class="form-input" id="inspTextSceneFontSize" value="${fontSize}" min="14" max="120" />
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.72rem; color:var(--text-muted);">Text Color</label>
+            <input type="color" class="form-input" id="inspTextSceneColor" value="${textColor}" style="height:36px; padding:2px;" />
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top:8px;">
+          <div class="form-group">
+            <label style="font-size:0.72rem; color:var(--text-muted);">Weight</label>
+            <select class="form-input" id="inspTextSceneWeight">
+              <option value="400" ${fontWeight == 400 ? 'selected' : ''}>Regular</option>
+              <option value="600" ${fontWeight == 600 ? 'selected' : ''}>Semi-Bold</option>
+              <option value="700" ${fontWeight == 700 ? 'selected' : ''}>Bold</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.72rem; color:var(--text-muted);">Alignment</label>
+            <select class="form-input" id="inspTextSceneAlign">
+              <option value="center" ${textAlign === 'center' ? 'selected' : ''}>Center</option>
+              <option value="left" ${textAlign === 'left' ? 'selected' : ''}>Left</option>
+              <option value="right" ${textAlign === 'right' ? 'selected' : ''}>Right</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Background Tint</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="color" class="form-input" id="inspTextSceneBgColor" value="${bgColor}" style="width:48px; height:36px; padding:2px;" />
+            <span style="font-size:0.72rem; color:var(--text-muted);">Custom backdrop accent color</span>
+          </div>
+        </div>
+      </div>
+
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderContextualImageSceneControls() {
+    const s = this.scene.settings || {};
+    const mediaInfo = this.resolveCurrentSceneMedia('image');
+    const fit = s.imageFit || s.fit || 'cover';
+    const titleVal = s.titleText || s.title || (this.getElementsList().find(e => e.id === 'title')?.content) || '';
+    const subtitleVal = s.subtitleText || s.subtitle || s.caption || (this.getElementsList().find(e => e.id === 'subtitle')?.content) || '';
+
+    return `
+      <!-- Active Photo Showcase Card -->
+      <div class="inspector-section" style="padding-top:0;">
+        <div class="inspector-section-title">Photo Media</div>
+        
+        <div class="inspector-media-preview-card" style="background:var(--surface-elevated, #161328); border:1px solid var(--border, rgba(255,255,255,0.12)); border-radius:8px; padding:10px; margin-bottom:12px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:64px; height:64px; border-radius:6px; overflow:hidden; background:#000; border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              ${mediaInfo.url ? `
+                <img src="${mediaInfo.url}" alt="Preview" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block';" />
+                <span style="display:none; font-size:1.5rem;">🖼️</span>
+              ` : `
+                <span style="font-size:1.5rem;">🖼️</span>
+              `}
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:0.8rem; font-weight:700; color:var(--text, #fff); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${mediaInfo.name}">
+                ${mediaInfo.name}
+              </div>
+              <div style="font-size:0.68rem; color:var(--text-muted, #888); margin-top:2px;">
+                ${mediaInfo.detail || 'Photo Frame'}
+              </div>
+              <button class="btn btn-primary btn-xs" id="btnSceneChangeImage" style="margin-top:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px; padding:3px 8px;">
+                <span>🔄 Change Photo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Frame Fit & Crop Mode</label>
+          <select class="form-input" id="inspImageSceneFit">
+            <option value="cover" ${fit === 'cover' ? 'selected' : ''}>Cover (Fill Frame Professionally)</option>
+            <option value="contain" ${fit === 'contain' ? 'selected' : ''}>Contain (Show Entire Photo)</option>
+            <option value="fill" ${fit === 'fill' ? 'selected' : ''}>Original Stretch / Fill</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Text Overlay / Caption (if supported) -->
+      <div class="inspector-section">
+        <div class="inspector-section-title">Headline & Caption</div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Title / Heading</label>
+          <input type="text" class="form-input" id="inspImageSceneTitle" value="${titleVal}" placeholder="e.g. Celebrating You!" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Subtitle / Caption</label>
+          <input type="text" class="form-input" id="inspImageSceneSubtitle" value="${subtitleVal}" placeholder="e.g. A memory to cherish forever." />
+        </div>
+      </div>
+
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderContextualVideoSceneControls() {
+    const s = this.scene.settings || {};
+    const mediaInfo = this.resolveCurrentSceneMedia('video');
+    const titleVal = s.titleText || s.title || (this.getElementsList().find(e => e.id === 'title')?.content) || '';
+    const autoplay = s.autoplay !== false;
+    const loop = s.loop !== false;
+    const muted = s.muted !== false;
+
+    return `
+      <!-- Active Video Showcase Card -->
+      <div class="inspector-section" style="padding-top:0;">
+        <div class="inspector-section-title">Video Media</div>
+
+        <div class="inspector-media-preview-card" style="background:var(--surface-elevated, #161328); border:1px solid var(--border, rgba(255,255,255,0.12)); border-radius:8px; padding:10px; margin-bottom:12px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:64px; height:64px; border-radius:6px; overflow:hidden; background:#000; border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <span style="font-size:1.8rem;">🎬</span>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:0.8rem; font-weight:700; color:var(--text, #fff); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${mediaInfo.name}">
+                ${mediaInfo.name || 'Selected Video'}
+              </div>
+              <div style="font-size:0.68rem; color:var(--text-muted, #888); margin-top:2px;">
+                ${mediaInfo.detail || 'Video Stream'}
+              </div>
+              <button class="btn btn-primary btn-xs" id="btnSceneChangeVideo" style="margin-top:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px; padding:3px 8px;">
+                <span>🔄 Change Video</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Video Title / Overlay (Optional)</label>
+          <input type="text" class="form-input" id="inspVideoSceneTitle" value="${titleVal}" placeholder="e.g. Highlights Reel" />
+        </div>
+      </div>
+
+      <!-- Playback Options -->
+      <div class="inspector-section">
+        <div class="inspector-section-title">Playback Options</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <label style="font-size:0.78rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+            <span>Autoplay Video</span>
+            <input type="checkbox" id="inspVideoAutoplay" ${autoplay ? 'checked' : ''} />
+          </label>
+          <label style="font-size:0.78rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+            <span>Loop Playback</span>
+            <input type="checkbox" id="inspVideoLoop" ${loop ? 'checked' : ''} />
+          </label>
+          <label style="font-size:0.78rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+            <span>Mute Video Sound</span>
+            <input type="checkbox" id="inspVideoMute" ${muted ? 'checked' : ''} />
+          </label>
+        </div>
+      </div>
+
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderContextualGallerySceneControls() {
+    const s = this.scene.settings || {};
+    const slots = this.resolveGallerySlots();
+    const layout = s.galleryLayout || s.layout || 'grid';
+    const titleVal = s.titleText || s.title || '';
+    const subtitleVal = s.subtitleText || s.subtitle || '';
+
+    return `
+      <div class="inspector-section" style="padding-top:0;">
+        <div class="inspector-section-title">Gallery Photos (${slots.length} Slots)</div>
+        
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+          ${slots.map((slot, idx) => `
+            <div class="gallery-slot-row" style="display:flex; align-items:center; justify-content:space-between; background:var(--surface-elevated, #161328); border:1px solid var(--border, rgba(255,255,255,0.1)); border-radius:6px; padding:6px 10px; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                <div style="width:36px; height:36px; border-radius:4px; overflow:hidden; background:#000; flex-shrink:0; border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center;">
+                  ${slot.url ? `
+                    <img src="${slot.url}" alt="${slot.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block';" />
+                    <span style="display:none; font-size:1rem;">🖼️</span>
+                  ` : `
+                    <span style="font-size:1rem; color:var(--text-muted);">📷</span>
+                  `}
+                </div>
+                <div style="min-width:0; flex:1;">
+                  <div style="font-size:0.75rem; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${slot.title || `Photo ${idx + 1}`}
+                  </div>
+                  <div style="font-size:0.65rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${slot.name}
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-secondary btn-xs btn-gallery-change-photo" data-slot-id="${slot.id}" data-slot-idx="${idx}" style="font-size:0.68rem; padding:3px 7px; font-weight:700;">
+                🔄 Change
+              </button>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Arrangement / Layout</label>
+          <select class="form-input" id="inspGalleryLayout">
+            <option value="grid" ${layout === 'grid' ? 'selected' : ''}>Grid Matrix</option>
+            <option value="masonry" ${layout === 'masonry' ? 'selected' : ''}>Dynamic Masonry</option>
+            <option value="carousel" ${layout === 'carousel' ? 'selected' : ''}>Horizontal Carousel</option>
+            <option value="stack" ${layout === 'stack' ? 'selected' : ''}>Overlapping Tilt Stack</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inspector-section">
+        <div class="inspector-section-title">Gallery Title & Subtitle</div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Headline Title</label>
+          <input type="text" class="form-input" id="inspGalleryTitle" value="${titleVal}" placeholder="e.g. Unforgettable Moments" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Subtitle</label>
+          <input type="text" class="form-input" id="inspGallerySubtitle" value="${subtitleVal}" placeholder="e.g. Looking back at our favorite times." />
+        </div>
+      </div>
+
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderContextualWishWallSceneControls() {
+    return `
+      ${this.renderWishWallControls()}
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderContextualUniversalSceneControls() {
+    const elements = this.getElementsList();
+
+    return `
+      <div class="inspector-section" style="padding-top:0;">
+        <div class="inspector-section-title">Canvas Layers & Elements (${elements.length})</div>
+        
+        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
+          ${elements.length === 0 ? `
+            <div style="padding:16px 8px; text-align:center; color:var(--text-muted); font-size:0.75rem; background:rgba(255,255,255,0.02); border-radius:6px; border:1px dashed var(--border);">
+              No elements on canvas. Click below to add your first element.
+            </div>
+          ` : elements.map(el => {
+            const icon = el.type === 'text' ? '🔤' : (el.type === 'image' || el.type === 'photo' ? '🖼️' : (el.type === 'video' ? '🎬' : '🎨'));
+            const snippet = (el.content || el.text || el.name || el.type || '').toString().substring(0, 24);
+            return `
+              <div class="universal-layer-row" data-element-id="${el.id}" style="display:flex; align-items:center; justify-content:space-between; background:var(--surface-elevated, #161328); border:1px solid var(--border, rgba(255,255,255,0.1)); border-radius:6px; padding:6px 10px; cursor:pointer; transition:all 0.15s ease;">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                  <span style="font-size:1rem;">${icon}</span>
+                  <div style="min-width:0;">
+                    <div style="font-size:0.75rem; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                      ${el.name || `${el.type.toUpperCase()} Element`}
+                    </div>
+                    <div style="font-size:0.65rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                      ${snippet}
+                    </div>
+                  </div>
+                </div>
+                <span style="font-size:0.68rem; color:var(--accent, #a78bfa); font-weight:700;">Edit ➔</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="inspector-section-title" style="margin-top:8px;">Quick Add to Canvas</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button class="btn btn-secondary btn-xs" id="btnQuickAddText" style="padding:6px 8px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px;">
+            <span>🔤 Add Text</span>
+          </button>
+          <button class="btn btn-secondary btn-xs" id="btnQuickAddImage" style="padding:6px 8px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px;">
+            <span>🖼️ Add Photo</span>
+          </button>
+          <button class="btn btn-secondary btn-xs" id="btnQuickAddShape" style="padding:6px 8px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px;">
+            <span>🎨 Add Shape</span>
+          </button>
+          <button class="btn btn-secondary btn-xs" id="btnQuickAddVideo" style="padding:6px 8px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px;">
+            <span>🎬 Add Video</span>
+          </button>
+        </div>
+      </div>
+
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderContextualSpecialSceneControls() {
+    const animConfig = this.scene.settings?.animationConfig || {};
+
+    return `
+      ${this.renderSpecialSceneControls()}
+
+      <!-- Special Animation Settings -->
+      <div class="inspector-section" style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:12px;">
+        <div class="inspector-section-title" style="color:var(--accent, #a78bfa); display:flex; align-items:center; gap:6px;">
+          <span>🎬</span> <span>Animation Controls</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size:0.75rem;">Duration / Speed</label>
+            <select class="form-input" id="inspSpecialAnimDuration">
+              <option value="1.5" ${animConfig.duration === 1.5 ? 'selected' : ''}>Fast (1.5s)</option>
+              <option value="2.5" ${animConfig.duration === 2.5 || !animConfig.duration ? 'selected' : ''}>Standard (2.5s)</option>
+              <option value="4.0" ${animConfig.duration === 4.0 ? 'selected' : ''}>Cinematic (4.0s)</option>
+              <option value="6.0" ${animConfig.duration === 6.0 ? 'selected' : ''}>Slow Paced (6.0s)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.75rem;">Delay</label>
+            <select class="form-input" id="inspSpecialAnimDelay">
+              <option value="0" ${!animConfig.delay ? 'selected' : ''}>Instant (0s)</option>
+              <option value="0.3" ${animConfig.delay === 0.3 ? 'selected' : ''}>Short (0.3s)</option>
+              <option value="0.8" ${animConfig.delay === 0.8 ? 'selected' : ''}>Dramatic (0.8s)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size:0.75rem;">Easing Dynamics</label>
+            <select class="form-input" id="inspSpecialAnimEase">
+              <option value="power2.out" ${animConfig.ease === 'power2.out' || !animConfig.ease ? 'selected' : ''}>Smooth Decel</option>
+              <option value="back.out(1.6)" ${animConfig.ease === 'back.out(1.6)' ? 'selected' : ''}>Spring Bounce</option>
+              <option value="sine.inOut" ${animConfig.ease === 'sine.inOut' ? 'selected' : ''}>Sine Breath</option>
+              <option value="none" ${animConfig.ease === 'none' ? 'selected' : ''}>Linear</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.75rem;">Particle Intensity</label>
+            <select class="form-input" id="inspSpecialAnimIntensity">
+              <option value="standard" ${animConfig.intensity === 'standard' || !animConfig.intensity ? 'selected' : ''}>Standard</option>
+              <option value="dense" ${animConfig.intensity === 'dense' ? 'selected' : ''}>High Density</option>
+              <option value="subtle" ${animConfig.intensity === 'subtle' ? 'selected' : ''}>Subtle</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      ${this.renderSceneTimingSection()}
+    `;
+  }
+
+  renderSceneTimingSection() {
+    return `
+      <!-- Scene Configuration & Timing Settings -->
+      <div class="inspector-section" style="border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:12px;">
+        <div class="inspector-section-title">Scene Settings & Timing</div>
+        <div class="form-group">
+          <label style="font-size:0.72rem; color:var(--text-muted);">Scene Name</label>
+          <input type="text" class="form-input" id="inspSceneName" value="${this.scene.name || 'Scene'}" />
+        </div>
+
+        <div class="form-row" style="margin-top:6px;">
+          <div class="form-group">
+            <label style="font-size:0.72rem; color:var(--text-muted);">Duration (s)</label>
             <input type="number" class="form-input" id="inspSceneDuration" value="${this.scene.duration || 6}" min="2" max="30" />
           </div>
           <div class="form-group">
-            <label style="font-size:0.75rem;">Transition</label>
+            <label style="font-size:0.72rem; color:var(--text-muted);">Transition</label>
             <select class="form-input" id="inspSceneTransition">
-              <option value="fade" ${this.scene.transition === 'fade' ? 'selected' : ''}>Fade</option>
+              <option value="fade" ${this.scene.transition === 'fade' || !this.scene.transition ? 'selected' : ''}>Fade</option>
               <option value="slide" ${this.scene.transition === 'slide' ? 'selected' : ''}>Slide</option>
               <option value="zoom" ${this.scene.transition === 'zoom' ? 'selected' : ''}>Zoom</option>
               <option value="pop" ${this.scene.transition === 'pop' ? 'selected' : ''}>Pop</option>
@@ -1459,12 +2046,11 @@ export class SmartInspectorView {
           </div>
         </div>
 
-        <div class="form-group" style="margin-top:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm, 6px);">
-          <label style="font-size:0.78rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-weight:700;">
+        <div class="form-group" style="margin-top:8px; padding:6px 10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:var(--radius-sm, 6px);">
+          <label style="font-size:0.75rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-weight:700; margin:0;">
             <span>🔒 Lock Layout Composition</span>
             <input type="checkbox" id="inspLockLayout" ${this.scene.lockedLayout !== false ? 'checked' : ''} />
           </label>
-          <span style="font-size:0.68rem; color:var(--text-muted); display:block; margin-top:3px;">Protects preset positions from accidental movement.</span>
         </div>
       </div>
     `;
@@ -1475,7 +2061,42 @@ export class SmartInspectorView {
       this.onProjectModified();
     };
 
+    const handleTextElementPropChange = (target) => {
+      if (!activeEl) return;
+      const targetScene = this.project?.scenes?.find(s => s.id === (this.selectedElementSceneId || this.activeSceneId || this.scene?.id)) || this.scene;
+      if (target.id === 'inspTextContent') {
+        activeEl.content = target.value;
+        activeEl.text = target.value;
+        if (targetScene) updateTextElement(targetScene, activeEl.id, { content: target.value });
+        notifyChange();
+      }
+      if (target.id === 'inspFontSize') {
+        const size = parseInt(target.value, 10) || 32;
+        activeEl.fontSize = size;
+        if (targetScene) updateTextElement(targetScene, activeEl.id, { fontSize: size });
+        notifyChange();
+      }
+      if (target.id === 'inspTextColor') {
+        activeEl.color = target.value;
+        if (targetScene) updateTextElement(targetScene, activeEl.id, { color: target.value });
+        notifyChange();
+      }
+      if (target.id === 'inspTextOpacity') {
+        const op = (parseFloat(target.value) || 100) / 100;
+        activeEl.opacity = op;
+        if (targetScene) updateTextElement(targetScene, activeEl.id, { opacity: op });
+        notifyChange();
+      }
+      if (target.id === 'inspLetterSpacing') {
+        const ls = parseFloat(target.value) || 0;
+        activeEl.letterSpacing = `${ls}px`;
+        if (targetScene) updateTextElement(targetScene, activeEl.id, { letterSpacing: `${ls}px` });
+        notifyChange();
+      }
+    };
+
     inspector.addEventListener('change', (e) => {
+      handleTextElementPropChange(e.target);
       if (!this.scene.settings) this.scene.settings = {};
       if (!this.scene.settings.animationConfig) this.scene.settings.animationConfig = {};
       if (!this.project.wishWall) this.project.wishWall = {};
@@ -1497,11 +2118,15 @@ export class SmartInspectorView {
         notifyChange();
       }
       if (e.target.id === 'inspSceneTransition') {
-        this.scene.transition = e.target.value;
+        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        if (target) target.transition = e.target.value;
+        if (this.scene) this.scene.transition = e.target.value;
         notifyChange();
       }
       if (e.target.id === 'inspLockLayout') {
-        this.scene.lockedLayout = e.target.checked;
+        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        if (target) target.lockedLayout = e.target.checked;
+        if (this.scene) this.scene.lockedLayout = e.target.checked;
         notifyChange();
       }
 
@@ -1534,11 +2159,105 @@ export class SmartInspectorView {
         this.scene.settings.showCta = e.target.checked;
         notifyChange();
       }
+
+      // Contextual Text Scene Controls
+      if (e.target.id === 'inspTextSceneFontFamily') {
+        this.scene.settings.fontFamily = e.target.value;
+        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
+        if (el) el.fontFamily = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspTextSceneFontSize') {
+        const sz = parseInt(e.target.value, 10) || 28;
+        this.scene.settings.fontSize = sz;
+        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
+        if (el) el.fontSize = sz;
+        notifyChange();
+      }
+      if (e.target.id === 'inspTextSceneWeight') {
+        this.scene.settings.fontWeight = e.target.value;
+        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
+        if (el) el.fontWeight = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspTextSceneAlign') {
+        this.scene.settings.textAlign = e.target.value;
+        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
+        if (el) { el.textAlign = e.target.value; el.align = e.target.value; }
+        notifyChange();
+      }
+      if (e.target.id === 'inspTextSceneColor') {
+        this.scene.settings.textColor = e.target.value;
+        const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message') || this.getElementsList()[0];
+        if (el) el.color = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspTextSceneBgColor') {
+        this.scene.settings.bgColor = e.target.value;
+        notifyChange();
+      }
+
+      // Contextual Image Scene Controls
+      if (e.target.id === 'inspImageSceneFit') {
+        this.scene.settings.imageFit = e.target.value;
+        const imgEl = this.getElementsList().find(x => x.type === 'image');
+        if (imgEl) imgEl.fit = e.target.value;
+        notifyChange();
+      }
+
+      // Contextual Video Scene Controls
+      if (e.target.id === 'inspVideoAutoplay') {
+        this.scene.settings.autoplay = e.target.checked;
+        notifyChange();
+      }
+      if (e.target.id === 'inspVideoLoop') {
+        this.scene.settings.loop = e.target.checked;
+        notifyChange();
+      }
+      if (e.target.id === 'inspVideoMute') {
+        this.scene.settings.muted = e.target.checked;
+        notifyChange();
+      }
+
+      // Contextual Gallery Scene Controls
+      if (e.target.id === 'inspGalleryLayout') {
+        this.scene.settings.galleryLayout = e.target.value;
+        notifyChange();
+      }
     });
 
     inspector.addEventListener('click', (e) => {
       if (e.target.id === 'btnInspReplaceImage' || e.target.id === 'btnInspReplaceVideo') {
         this.onOpenAssetPicker(activeEl);
+      }
+      if (e.target.closest('#btnSceneChangeImage')) {
+        this.onOpenAssetPicker({ type: 'image', slotId: 'hero_image' });
+      }
+      if (e.target.closest('#btnSceneChangeVideo')) {
+        this.onOpenAssetPicker({ type: 'video', slotId: 'video' });
+      }
+      const btnGalleryChange = e.target.closest('.btn-gallery-change-photo');
+      if (btnGalleryChange) {
+        const slotId = btnGalleryChange.dataset.slotId;
+        const idx = parseInt(btnGalleryChange.dataset.slotIdx, 10);
+        this.onOpenAssetPicker({ type: 'image', slotId: slotId, idx: idx });
+      }
+      const layerRow = e.target.closest('.universal-layer-row');
+      if (layerRow) {
+        const elId = layerRow.dataset.elementId;
+        if (elId) this.onSelectElement(elId);
+      }
+      if (e.target.closest('#btnQuickAddText')) {
+        this.onQuickAddElement?.('text');
+      }
+      if (e.target.closest('#btnQuickAddImage')) {
+        this.onQuickAddElement?.('image');
+      }
+      if (e.target.closest('#btnQuickAddShape')) {
+        this.onQuickAddElement?.('shape');
+      }
+      if (e.target.closest('#btnQuickAddVideo')) {
+        this.onQuickAddElement?.('video');
       }
       if (e.target.closest('#btnInspectorDeleteElement') && activeEl) {
         this.onDeleteElement(activeEl);
@@ -2006,7 +2725,83 @@ export class SmartInspectorView {
         }
       }
 
+      if (e.target.id === 'inspSceneName') {
+        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        if (target) target.name = e.target.value;
+        if (this.scene) this.scene.name = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspSceneDuration') {
+        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        const dur = parseInt(e.target.value, 10) || 6;
+        if (target) target.duration = dur;
+        if (this.scene) this.scene.duration = dur;
+        notifyChange();
+      }
+
       if (!activeEl) {
+        if (e.target.id === 'inspTextSceneTitle') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.titleText = e.target.value;
+          this.scene.settings.title = e.target.value;
+          this.scene.name = e.target.value || this.scene.name;
+          const el = this.getElementsList().find(x => x.id === 'title' || x.role === 'title');
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspTextSceneContent') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.messageText = e.target.value;
+          this.scene.settings.textContent = e.target.value;
+          this.scene.settings.subtitleText = e.target.value;
+          const el = this.getElementsList().find(x => x.id === 'subtitle' || x.id === 'message' || x.role === 'body' || x.role === 'subtitle') || this.getElementsList()[0];
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspImageSceneTitle') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.titleText = e.target.value;
+          this.scene.settings.title = e.target.value;
+          this.scene.name = e.target.value || this.scene.name;
+          const el = this.getElementsList().find(x => x.id === 'title');
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspImageSceneSubtitle') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.subtitleText = e.target.value;
+          this.scene.settings.subtitle = e.target.value;
+          this.scene.settings.caption = e.target.value;
+          const el = this.getElementsList().find(x => x.id === 'subtitle');
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspVideoSceneTitle') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.titleText = e.target.value;
+          this.scene.settings.title = e.target.value;
+          this.scene.name = e.target.value || this.scene.name;
+          const el = this.getElementsList().find(x => x.id === 'title');
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspGalleryTitle') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.titleText = e.target.value;
+          this.scene.settings.title = e.target.value;
+          const el = this.getElementsList().find(x => x.id === 'title');
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+        if (e.target.id === 'inspGallerySubtitle') {
+          if (!this.scene.settings) this.scene.settings = {};
+          this.scene.settings.subtitleText = e.target.value;
+          this.scene.settings.subtitle = e.target.value;
+          const el = this.getElementsList().find(x => x.id === 'subtitle');
+          if (el) { el.content = e.target.value; el.text = e.target.value; }
+          notifyChange();
+        }
+
         if (e.target.id === 'inspStdTitle') {
           if (!this.scene.settings) this.scene.settings = {};
           this.scene.settings.titleText = e.target.value;
@@ -2044,15 +2839,6 @@ export class SmartInspectorView {
           this.scene.settings.scriptNote = e.target.value;
           const el = this.getElementsList().find(x => x.id === 'scriptNote');
           if (el) { el.content = e.target.value; el.text = e.target.value; }
-          notifyChange();
-        }
-
-        if (e.target.id === 'inspSceneName') {
-          this.scene.name = e.target.value;
-          notifyChange();
-        }
-        if (e.target.id === 'inspSceneDuration') {
-          this.scene.duration = parseInt(e.target.value, 10) || 6;
           notifyChange();
         }
 
@@ -2222,27 +3008,7 @@ export class SmartInspectorView {
       }
 
       // Text element inputs
-      if (e.target.id === 'inspTextContent') {
-        activeEl.content = e.target.value;
-        activeEl.text = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspFontSize') {
-        activeEl.fontSize = parseInt(e.target.value, 10) || 32;
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextColor') {
-        activeEl.color = e.target.value;
-        notifyChange();
-      }
-      if (e.target.id === 'inspTextOpacity') {
-        activeEl.opacity = (parseFloat(e.target.value) || 100) / 100;
-        notifyChange();
-      }
-      if (e.target.id === 'inspLetterSpacing') {
-        activeEl.letterSpacing = `${e.target.value}px`;
-        notifyChange();
-      }
+      handleTextElementPropChange(e.target);
       if (e.target.id === 'inspTextX') {
         activeEl.x = parseFloat(e.target.value) || 0;
         activeEl.left = activeEl.x;
@@ -2350,33 +3116,42 @@ export class SmartInspectorView {
         return;
       }
 
+      if (e.target.id === 'inspSceneTransition') {
+        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        if (target) target.transition = e.target.value;
+        if (this.scene) this.scene.transition = e.target.value;
+        notifyChange();
+      }
+      if (e.target.id === 'inspLockLayout') {
+        const target = this.project?.scenes?.find(s => s.id === (this.activeSceneId || this.scene?.id)) || this.scene;
+        if (target) target.lockedLayout = e.target.checked;
+        if (this.scene) this.scene.lockedLayout = e.target.checked;
+        notifyChange();
+      }
+
       if (!activeEl) {
-        if (e.target.id === 'inspSceneTransition') {
-          this.scene.transition = e.target.value;
-          notifyChange();
-        }
-        if (e.target.id === 'inspLockLayout') {
-          this.scene.lockedLayout = e.target.checked;
-          notifyChange();
-        }
         return;
       }
 
       if (e.target.id === 'inspFontFamily') {
         activeEl.fontFamily = e.target.value;
+        if (this.scene) updateTextElement(this.scene, activeEl.id, { fontFamily: e.target.value });
         notifyChange();
       }
       if (e.target.id === 'inspFontWeight') {
         activeEl.fontWeight = e.target.value;
+        if (this.scene) updateTextElement(this.scene, activeEl.id, { fontWeight: e.target.value });
         notifyChange();
       }
       if (e.target.id === 'inspTextAlign') {
         activeEl.textAlign = e.target.value;
         activeEl.align = e.target.value;
+        if (this.scene) updateTextElement(this.scene, activeEl.id, { textAlign: e.target.value, align: e.target.value });
         notifyChange();
       }
       if (e.target.id === 'inspElementAnim') {
         activeEl.animation = e.target.value;
+        if (this.scene) updateTextElement(this.scene, activeEl.id, { animation: e.target.value });
         notifyChange();
       }
       if (e.target.id === 'inspImageFit') {

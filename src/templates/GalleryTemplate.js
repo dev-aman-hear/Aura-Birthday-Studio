@@ -25,8 +25,9 @@ export function renderGalleryTemplate(scene, project, assets = []) {
     ];
   }
 
-  const titleText = scene.settings?.titleText !== undefined ? scene.settings.titleText : '🖼️ Precious Memories';
-  const subtitleText = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : 'A collection of beautiful moments shared together';
+  const titleText = scene.settings?.titleText !== undefined ? scene.settings.titleText : (scene.settings?.title || '🖼️ Precious Memories');
+  const subtitleText = scene.settings?.subtitleText !== undefined ? scene.settings.subtitleText : (scene.settings?.subtitle || 'A collection of beautiful moments shared together');
+  const layout = scene.settings?.galleryLayout || scene.settings?.layout || 'grid';
 
   return `
     <div class="template-container gallery-template">
@@ -35,9 +36,9 @@ export function renderGalleryTemplate(scene, project, assets = []) {
         <p>${renderTextElementHTML(scene, 'subtitle', subtitleText, 'gallery-subtitle')}</p>
       </div>
 
-      <div class="gallery-grid">
+      <div class="gallery-grid layout-${layout}">
         ${displayImages.map((img, idx) => `
-          <div class="gallery-card" data-image-id="${img.id || `gallery-img-${idx}`}">
+          <div class="gallery-card" data-element-id="${img.id || `gallery-img-${idx}`}" data-image-id="${img.id || `gallery-img-${idx}`}">
             <img src="${img.renderUrl}" alt="${img.name || 'Memory'}" loading="lazy" decoding="async" />
             <div class="gallery-card-caption">${img.name || `Special Memory ${idx + 1}`}</div>
           </div>

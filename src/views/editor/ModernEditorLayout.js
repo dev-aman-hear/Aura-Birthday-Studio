@@ -20,8 +20,11 @@ import { Toast } from '../../utils/Toast.js';
 
 export class ModernEditorLayout {
   constructor(options = {}) {
-    this.project = options.project || {};
-    this.selectedSceneId = options.selectedSceneId || (this.project.scenes?.[0]?.id || null);
+    this.project = options.project || { scenes: [] };
+    this.activeSceneId = options.activeSceneId || options.selectedSceneId || (this.project.scenes?.[0]?.id || null);
+    this.selectedSceneId = this.activeSceneId;
+    this.selectedElementId = options.selectedElementId || null;
+    this.selectedElementSceneId = this.selectedElementId ? this.activeSceneId : null;
     this.allAssets = options.allAssets || [];
     this.user = options.user || null;
     this.onProjectModified = options.onProjectModified || (() => {});
@@ -30,7 +33,6 @@ export class ModernEditorLayout {
     this.onNavAction = options.onNavAction || (() => {});
     this.onViewModeChange = options.onViewModeChange || (() => {});
 
-    this.selectedElementId = options.selectedElementId || null;
     this.viewMode = options.viewMode || localStorage.getItem('birthday_studio_view_mode') || 'desktop';
     this.canvasRatio = options.canvasRatio || localStorage.getItem('birthday_studio_canvas_ratio') || (this.viewMode === 'desktop' ? 'ratio-widescreen' : 'ratio-story');
     this.isRailCollapsed = false;
@@ -47,18 +49,36 @@ export class ModernEditorLayout {
     this.canvasWorkspace = null;
   }
 
+  getActiveScene() {
+    if (!this.project?.scenes?.length) return null;
+    const targetId = this.activeSceneId || this.selectedSceneId;
+    if (targetId) {
+      const found = this.project.scenes.find(s => s.id === targetId);
+      if (found) return found;
+    }
+    // Only on initial startup when no scene has ever been chosen
+    if (!this.activeSceneId && !this.selectedSceneId) {
+      const firstScene = this.project.scenes[0] || null;
+      if (firstScene) {
+        this.activeSceneId = firstScene.id;
+        this.selectedSceneId = firstScene.id;
+      }
+      return firstScene;
+    }
+    return null;
+  }
+
   async render() {
     const root = document.createElement('div');
     root.className = `modern-editor-root ${this.isFocusMode ? 'editor-focus-mode' : ''}`;
     root.id = 'modernEditorRoot';
 
-    const activeScene = this.project.scenes?.find(s => s.id === this.selectedSceneId) || this.project.scenes?.[0];
+    const activeScene = this.getActiveScene();
     if (activeScene && !this.selectedSceneId) {
       this.selectedSceneId = activeScene.id;
     }
 
-    const elements = activeScene?.elements || activeScene?.textElements || [];
-    const selectedEl = elements.find(e => e.id === this.selectedElementId) || null;
+    const selectedEl = this.getSelectedElement(activeScene);
 
     // 1. Workspace Grid Container
     const workspaceGrid = document.createElement('div');
@@ -108,7 +128,7 @@ export class ModernEditorLayout {
       scene: activeScene,
       currentRatio: this.canvasRatio,
       viewMode: this.viewMode,
-      onAction: (action) => this.handleContextAction(action, this.getSelectedElement(activeScene), activeScene, canvasWorkspace, workspaceGrid)
+      onAction: (action) => this.handleContextAction(action, this.getSelectedElement(), this.getActiveScene(), canvasWorkspace, workspaceGrid)
     });
     const toolbarElem = this.contextualToolbarView.render();
     canvasWorkspace.appendChild(toolbarElem);
@@ -121,13 +141,42 @@ export class ModernEditorLayout {
     this.storyCanvasView = new StoryCanvasView({
       project: this.project,
       scene: activeScene,
+      activeSceneId: this.activeSceneId,
       allAssets: this.allAssets,
       hideHeader: true,
-      onSelectElement: (elId) => {
-        this.selectedElementId = elId;
+      onSelectElement: (elId, sceneId) => {
+        if (elId) {
+          this.selectedElementId = elId;
+          this.selectedElementSceneId = sceneId || this.activeSceneId;
+          if (sceneId && sceneId !== this.activeSceneId) {
+            this.activeSceneId = sceneId;
+            this.selectedSceneId = sceneId;
+            this.onSelectSceneCallback(sceneId);
+          }
+        } else {
+          // Deselect element: activeSceneId MUST remain untouched!
+          this.selectedElementId = null;
+          this.selectedElementSceneId = null;
+        }
         this.onSelectElementCallback(elId);
-        this.updateContextualToolbar(activeScene, canvasWorkspace, workspaceGrid);
-        this.updateSmartInspector(activeScene, workspaceGrid);
+        const currentScene = this.getActiveScene();
+        this.updateContextualToolbar(currentScene, canvasWorkspace, workspaceGrid);
+        this.updateSmartInspector(currentScene, workspaceGrid);
+      },
+      onEditTextAction: (elId, sceneId) => {
+        if (elId) {
+          this.selectedElementId = elId;
+          this.selectedElementSceneId = sceneId || this.activeSceneId;
+          if (sceneId && sceneId !== this.activeSceneId) {
+            this.activeSceneId = sceneId;
+            this.selectedSceneId = sceneId;
+            this.onSelectSceneCallback(sceneId);
+          }
+        }
+        this.onSelectElementCallback(elId);
+        const currentScene = this.getActiveScene();
+        const currentEl = this.getSelectedElement(currentScene);
+        this.handleContextAction('editText', currentEl, currentScene, canvasWorkspace, workspaceGrid);
       },
       onOpenAssetPicker: (el) => this.openAssetPickerForElement(el),
       onOpenAddSceneModal: () => this.openAddScenePicker(),
@@ -140,22 +189,55 @@ export class ModernEditorLayout {
     const canvasContent = await this.storyCanvasView.render();
     canvasFrame.appendChild(canvasContent);
     canvasWorkspace.appendChild(canvasFrame);
+
+    // Clicking empty canvas workspace background clears element selection while preserving activeSceneId
+    canvasWorkspace.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-element-id]') && !e.target.closest('[data-text-id]') && !e.target.closest('[data-image-id]') && !e.target.closest('[data-slot-id]') && !e.target.closest('[data-collage-id]') && !e.target.closest('#canvasSelectionOverlay') && !e.target.closest('.canvas-contextual-toolbar')) {
+        this.storyCanvasView?.selectionManager?.clearSelection();
+        if (this.selectedElementId !== null) {
+          this.selectedElementId = null;
+          this.selectedElementSceneId = null;
+          this.onSelectElementCallback(null);
+          const currentScene = this.getActiveScene();
+          this.updateContextualToolbar(currentScene, canvasWorkspace, workspaceGrid);
+          this.updateSmartInspector(currentScene, workspaceGrid);
+        }
+      }
+    });
+
     workspaceGrid.appendChild(canvasWorkspace);
 
     // 4. Right Smart Inspector
     this.smartInspectorView = new SmartInspectorView({
       project: this.project,
       scene: activeScene,
+      activeSceneId: this.activeSceneId,
+      selectedSceneId: this.selectedSceneId,
+      selectedElementSceneId: this.selectedElementSceneId,
       allAssets: this.allAssets,
       selectedElementId: this.selectedElementId,
       onProjectModified: () => {
         this.onProjectModified();
         this.storyCanvasView?.updateCanvasContent();
       },
-      onOpenAssetPicker: (el) => this.openAssetPickerForElement(el),
-      onDeleteElement: (el) => this.deleteElement(el, activeScene),
+      onSelectElement: (elId) => {
+        if (elId) {
+          this.selectedElementId = elId;
+          this.selectedElementSceneId = this.activeSceneId;
+        } else {
+          this.selectedElementId = null;
+          this.selectedElementSceneId = null;
+        }
+        this.onSelectElementCallback(elId);
+        const currentScene = this.getActiveScene();
+        this.updateContextualToolbar(currentScene, canvasWorkspace, workspaceGrid);
+        this.updateSmartInspector(currentScene, workspaceGrid);
+      },
+      onOpenAssetPicker: (elOrOptions, maybeOptions) => this.openAssetPickerForElement(elOrOptions, maybeOptions),
+      onDeleteElement: (el) => this.deleteElement(el, this.getActiveScene()),
       onOpenModeration: () => this.onNavAction('openModeration'),
-      onPreviewWishWall: () => this.onNavAction('openWishWallPreview')
+      onPreviewWishWall: () => this.onNavAction('openWishWallPreview'),
+      onQuickAddElement: (type) => this.addElementToScene(type, this.getActiveScene())
     });
     const inspectorElem = this.smartInspectorView.render();
     workspaceGrid.appendChild(inspectorElem);
@@ -218,7 +300,7 @@ export class ModernEditorLayout {
     mobileActionBar.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-mobile-tool]');
       if (btn) {
-        this.handleMobileToolClick(btn.dataset.mobileTool, activeScene);
+        this.handleMobileToolClick(btn.dataset.mobileTool, this.getActiveScene());
       }
     });
 
@@ -246,18 +328,21 @@ export class ModernEditorLayout {
   }
 
   getSelectedElement(activeScene) {
-    const elements = activeScene?.elements || activeScene?.textElements || [];
+    const scene = activeScene || this.getActiveScene();
+    const elements = scene?.elements || scene?.textElements || [];
     return elements.find(e => e.id === this.selectedElementId) || null;
   }
 
   async handleSceneChange(sceneId) {
     if (!sceneId) return;
+    this.activeSceneId = sceneId;
     this.selectedSceneId = sceneId;
     this.selectedElementId = null;
+    this.selectedElementSceneId = null;
     this.onSelectSceneCallback(sceneId);
     this.onSelectElementCallback(null);
 
-    const activeScene = this.project.scenes?.find(s => s.id === sceneId) || this.project.scenes?.[0];
+    const activeScene = this.getActiveScene();
     if (!activeScene) return;
 
     // 1. Reactive Active Outline Update across Desktop & Mobile Scene Navigators
@@ -271,6 +356,11 @@ export class ModernEditorLayout {
     // 2. Live Canvas Update
     if (this.storyCanvasView) {
       this.storyCanvasView.scene = activeScene;
+      this.storyCanvasView.activeSceneId = sceneId;
+      if (this.storyCanvasView.selectionManager) {
+        this.storyCanvasView.selectionManager.clearSelection();
+        this.storyCanvasView.selectionManager.setScene(activeScene, document.getElementById('canvasViewportBody'));
+      }
       await this.storyCanvasView.updateCanvasContent();
     }
 
@@ -291,38 +381,60 @@ export class ModernEditorLayout {
     }
   }
 
-  updateContextualToolbar(activeScene, canvasWorkspace, workspaceGrid) {
+  updateContextualToolbar(scene, canvasWorkspace, workspaceGrid) {
+    const activeScene = scene || this.getActiveScene();
+    const workspace = canvasWorkspace || this.canvasWorkspace;
+    const grid = workspaceGrid || this.workspaceGrid;
     const selectedEl = this.getSelectedElement(activeScene);
-    const existingToolbar = canvasWorkspace?.querySelector('#floatingContextToolbar');
+    const existingToolbar = workspace?.querySelector('#floatingContextToolbar');
     if (existingToolbar) {
       this.contextualToolbarView = new ContextualToolbarView({
         selectedElement: selectedEl,
         scene: activeScene,
         currentRatio: this.canvasRatio,
         viewMode: this.viewMode,
-        onAction: (action) => this.handleContextAction(action, selectedEl, activeScene, canvasWorkspace, workspaceGrid)
+        onAction: (action) => this.handleContextAction(action, selectedEl, activeScene, workspace, grid)
       });
       const newToolbar = this.contextualToolbarView.render();
       existingToolbar.replaceWith(newToolbar);
     }
   }
 
-  updateSmartInspector(activeScene, workspaceGrid) {
-    const existingInspector = workspaceGrid?.querySelector('#modernSmartInspector') || workspaceGrid?.querySelector('.modern-smart-inspector');
+  updateSmartInspector(scene, workspaceGrid) {
+    const activeScene = scene || this.getActiveScene();
+    const grid = workspaceGrid || this.workspaceGrid;
+    const existingInspector = grid?.querySelector('#modernSmartInspector') || grid?.querySelector('.modern-smart-inspector');
     if (existingInspector) {
       this.smartInspectorView = new SmartInspectorView({
         project: this.project,
         scene: activeScene,
+        activeSceneId: this.activeSceneId,
+        selectedSceneId: this.selectedSceneId,
+        selectedElementSceneId: this.selectedElementSceneId,
         allAssets: this.allAssets,
         selectedElementId: this.selectedElementId,
         onProjectModified: () => {
           this.onProjectModified();
           this.storyCanvasView?.updateCanvasContent();
         },
-        onOpenAssetPicker: (el) => this.openAssetPickerForElement(el),
-        onDeleteElement: (el) => this.deleteElement(el, activeScene),
+        onSelectElement: (elId) => {
+          if (elId) {
+            this.selectedElementId = elId;
+            this.selectedElementSceneId = this.activeSceneId;
+          } else {
+            this.selectedElementId = null;
+            this.selectedElementSceneId = null;
+          }
+          this.onSelectElementCallback(elId);
+          const currentScene = this.getActiveScene();
+          this.updateContextualToolbar(currentScene, this.canvasWorkspace, grid);
+          this.updateSmartInspector(currentScene, grid);
+        },
+        onOpenAssetPicker: (elOrOptions, maybeOptions) => this.openAssetPickerForElement(elOrOptions, maybeOptions),
+        onDeleteElement: (el) => this.deleteElement(el, this.getActiveScene()),
         onOpenModeration: () => this.onNavAction('openModeration'),
-        onPreviewWishWall: () => this.onNavAction('openWishWallPreview')
+        onPreviewWishWall: () => this.onNavAction('openWishWallPreview'),
+        onQuickAddElement: (type) => this.addElementToScene(type, this.getActiveScene())
       });
       const newInspector = this.smartInspectorView.render();
       existingInspector.replaceWith(newInspector);
@@ -336,17 +448,72 @@ export class ModernEditorLayout {
   }
 
   handleContextAction(action, selectedEl, activeScene, canvasWorkspace, workspaceGrid) {
-    if (action === 'add') {
-      const existing = canvasWorkspace.querySelector('#universalAddPopover');
+    const currentScene = activeScene || this.getActiveScene();
+    const currentElement = selectedEl || this.getSelectedElement(currentScene);
+    const workspace = canvasWorkspace || this.canvasWorkspace;
+    const grid = workspaceGrid || this.workspaceGrid;
+
+    if (action === 'editText' || action === 'edit') {
+      // 1. Ensure right-side inspector is expanded
+      if (this.isInspectorCollapsed) {
+        this.isInspectorCollapsed = false;
+        grid?.classList.remove('inspector-collapsed');
+        const inspectorToggle = document.getElementById('inspectorToggleTab');
+        if (inspectorToggle) {
+          inspectorToggle.title = 'Collapse Inspector';
+          inspectorToggle.innerHTML = '▶';
+        }
+      }
+
+      // 2. Refresh Smart Inspector for the current scene & element
+      this.updateSmartInspector(currentScene, grid);
+
+      // 3. Focus corresponding text input in inspector
+      const inspInput = grid?.querySelector('#inspTextContent') ||
+                        grid?.querySelector('#inspTextSceneTitle') ||
+                        grid?.querySelector('#inspTextSceneContent') ||
+                        grid?.querySelector('#inspStdTitle') ||
+                        grid?.querySelector('#inspStdSubtitle') ||
+                        grid?.querySelector('#inspWishWallTitle');
+      if (inspInput) {
+        inspInput.focus();
+        if (inspInput.select) inspInput.select();
+      }
+
+      // 4. Trigger inline text editing on canvas if DOM element exists
+      if (this.storyCanvasView?.selectionManager && currentElement) {
+        const domNode = workspace?.querySelector(`[data-element-id="${currentElement.id}"], [data-text-id="${currentElement.id}"]`);
+        if (domNode) {
+          this.storyCanvasView.selectionManager.enableInlineTextEdit(domNode, currentElement);
+        }
+      }
+    } else if (action === 'font' || action === 'fontSize' || action === 'fontColor') {
+      if (this.isInspectorCollapsed) {
+        this.isInspectorCollapsed = false;
+        grid?.classList.remove('inspector-collapsed');
+        const inspectorToggle = document.getElementById('inspectorToggleTab');
+        if (inspectorToggle) {
+          inspectorToggle.title = 'Collapse Inspector';
+          inspectorToggle.innerHTML = '▶';
+        }
+      }
+      this.updateSmartInspector(currentScene, grid);
+      const targetInput = grid?.querySelector(action === 'font' ? '#inspFontFamily' : (action === 'fontSize' ? '#inspFontSize' : '#inspTextColor')) ||
+                          grid?.querySelector(action === 'font' ? '#inspTextSceneFontFamily' : (action === 'fontSize' ? '#inspTextSceneFontSize' : '#inspTextSceneColor'));
+      if (targetInput) {
+        targetInput.focus();
+      }
+    } else if (action === 'add') {
+      const existing = workspace?.querySelector('#universalAddPopover');
       if (existing) {
         existing.remove();
         return;
       }
       const popover = new UniversalAddMenuView(
-        (type) => this.addElementToScene(type, activeScene),
+        (type) => this.addElementToScene(type, currentScene),
         () => {}
       );
-      canvasWorkspace.appendChild(popover.render());
+      workspace?.appendChild(popover.render());
     } else if (action === 'style') {
       this.onNavAction('openStyle');
     } else if (action === 'openModeration' || action === 'wishes') {
@@ -358,35 +525,35 @@ export class ModernEditorLayout {
     } else if (action === 'previewExperience') {
       this.onNavAction('previewExperience');
     } else if (action === 'media' || action === 'replaceMedia') {
-      this.openAssetPickerForElement(selectedEl);
+      this.openAssetPickerForElement(currentElement);
     } else if (action === 'timing') {
-      if (selectedEl) {
-        const timingModal = new TimingPanelView(selectedEl, activeScene, () => {
+      if (currentElement) {
+        const timingModal = new TimingPanelView(currentElement, currentScene, () => {
           this.onProjectModified();
           this.storyCanvasView?.updateCanvasContent();
         });
         document.body.appendChild(timingModal.render());
       } else {
-        const dur = prompt('Enter scene duration in seconds (1-30):', activeScene.duration || 6);
+        const dur = prompt('Enter scene duration in seconds (1-30):', currentScene.duration || 6);
         if (dur && !isNaN(Number(dur))) {
-          activeScene.duration = Math.max(1, Math.min(30, Number(dur)));
+          currentScene.duration = Math.max(1, Math.min(30, Number(dur)));
           this.onProjectModified();
           this.storyCanvasView?.updateCanvasContent();
-          this.updateSmartInspector(activeScene, workspaceGrid);
+          this.updateSmartInspector(currentScene, grid);
         }
       }
     } else if (action === 'toggleRatioStory' || action === 'toggleViewMobile' || action === 'setModeMobile') {
       this.setPreviewMode('mobile');
     } else if (action === 'toggleRatioWide' || action === 'toggleViewDesktop' || action === 'setModeDesktop') {
       this.setPreviewMode('desktop');
-    } else if (action === 'duplicate' && selectedEl) {
-      this.duplicateElement(selectedEl, activeScene);
-    } else if (action === 'delete' && selectedEl) {
-      this.deleteElement(selectedEl, activeScene);
-    } else if (action === 'bringForward' && selectedEl) {
-      this.reorderElement(selectedEl, activeScene, 1);
-    } else if (action === 'sendBackward' && selectedEl) {
-      this.reorderElement(selectedEl, activeScene, -1);
+    } else if (action === 'duplicate' && currentElement) {
+      this.duplicateElement(currentElement, currentScene);
+    } else if (action === 'delete' && currentElement) {
+      this.deleteElement(currentElement, currentScene);
+    } else if (action === 'bringForward' && currentElement) {
+      this.reorderElement(currentElement, currentScene, 1);
+    } else if (action === 'sendBackward' && currentElement) {
+      this.reorderElement(currentElement, currentScene, -1);
     }
   }
 
@@ -404,7 +571,7 @@ export class ModernEditorLayout {
       frame.setAttribute('data-preview-mode', normalizedMode);
     }
 
-    const activeScene = this.project.scenes?.find(s => s.id === this.selectedSceneId) || this.project.scenes?.[0];
+    const activeScene = this.getActiveScene();
     this.updateContextualToolbar(activeScene, this.canvasWorkspace, this.workspaceGrid);
     this.updateToolbarRatioButtons();
 
@@ -574,13 +741,27 @@ export class ModernEditorLayout {
     }
   }
 
-  openAssetPickerForElement(el) {
-    const activeScene = this.project.scenes?.find(s => s.id === this.selectedSceneId) || this.project.scenes?.[0];
+  openAssetPickerForElement(elOrOptions, maybeOptions = {}) {
+    let el = null;
+    let options = {};
+    if (elOrOptions && (elOrOptions.type === 'image' || elOrOptions.type === 'video' || elOrOptions.type === 'audio' || elOrOptions.slotId) && !elOrOptions.id) {
+      options = elOrOptions;
+    } else {
+      el = elOrOptions;
+      options = maybeOptions || {};
+    }
+
+    const activeScene = this.getActiveScene();
+    const targetType = options.type || el?.type || (el?.slotId && (el.slotId.includes('video') ? 'video' : 'image')) || null;
+    const targetSlotId = options.slotId || el?.slotId || null;
+
     const modal = new AssetPickerModal({
       project: this.project,
       allAssets: this.allAssets,
       targetScene: activeScene,
-      targetSlotId: el?.slotId || null,
+      targetSlotId: targetSlotId,
+      type: targetType,
+      filterTab: targetType || (options.filterTab || 'compatible'),
       onProjectModified: () => {
         this.onProjectModified();
         this.storyCanvasView?.updateCanvasContent();
@@ -600,9 +781,35 @@ export class ModernEditorLayout {
           if (!activeScene.assetIds.includes(asset.id)) {
             activeScene.assetIds.push(asset.id);
           }
-          if (el?.slotId) {
+          if (targetSlotId) {
             if (!activeScene.slots) activeScene.slots = {};
-            activeScene.slots[el.slotId] = asset.id;
+            activeScene.slots[targetSlotId] = asset.id;
+          }
+          if (activeScene.template === 'hero') {
+            if (!activeScene.settings) activeScene.settings = {};
+            activeScene.settings.heroPhotoAssetId = asset.id;
+            activeScene.settings.photoAssetId = asset.id;
+          } else if (activeScene.template === 'fullscreen_photo') {
+            if (!activeScene.settings) activeScene.settings = {};
+            activeScene.settings.photoAssetId = asset.id;
+          } else if (activeScene.template === 'video_showcase' || activeScene.template === 'video') {
+            if (!activeScene.settings) activeScene.settings = {};
+            activeScene.settings.videoAssetId = asset.id;
+          } else if (activeScene.template === 'photo_gallery' || activeScene.template === 'collage') {
+            if (!activeScene.slots) activeScene.slots = {};
+            if (options.idx !== undefined) {
+              if (!Array.isArray(activeScene.slots.gallery_photos)) {
+                activeScene.slots.gallery_photos = [];
+              }
+              activeScene.slots.gallery_photos[options.idx] = asset.id;
+            }
+          }
+        }
+        // Ensure central celebration library includes asset
+        if (this.project && asset) {
+          if (!Array.isArray(this.project.assets)) this.project.assets = [];
+          if (!this.project.assets.some(a => a.id === asset.id)) {
+            this.project.assets.push(asset);
           }
         }
         this.onProjectModified();

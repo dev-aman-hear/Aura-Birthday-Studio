@@ -17,11 +17,12 @@ export class AssetPickerModal {
     this.allAssets = options.allAssets || [];
     this.targetScene = options.targetScene || null;
     this.targetSlotId = options.targetSlotId || null;
-    this.targetType = options.type || null;
+    this.targetType = options.type || options.filterType || null;
     this.onSelectAsset = options.onSelectAsset || (() => {});
     this.onProjectModified = options.onProjectModified || (() => {});
     this.searchQuery = '';
-    this.filterTab = options.filterTab || (options.type === 'image' ? 'image' : 'compatible'); // 'compatible', 'all', 'image', 'video', 'audio', 'sticker'
+    const initialTab = options.filterTab || (this.targetType === 'image' ? 'image' : (this.targetType === 'video' ? 'video' : (this.targetType === 'audio' ? 'audio' : 'compatible')));
+    this.filterTab = initialTab;
     this.selectedAsset = null;
   }
 
@@ -42,16 +43,59 @@ export class AssetPickerModal {
 
     const slotTitle = targetSlot ? `for ${targetSlot.name}` : (this.targetScene ? `for ${def?.name}` : '');
 
+    let modalTitle = `Select Media Asset ${slotTitle}`;
+    let modalSubtitle = targetSlot ? `${targetSlot.description} • Formats: ${(targetSlot.formats || ['Any']).join(', ').toUpperCase()}` : 'Choose from library or upload new files';
+    let filterTabsHtml = '';
+    let uploadAccept = 'image/*,video/*,audio/*';
+    let uploadBtnLabel = 'Upload New';
+
+    if (this.targetType === 'image') {
+      modalTitle = `Select Photo Asset ${slotTitle}`;
+      modalSubtitle = 'Choose from celebration photos or upload a high-resolution image';
+      uploadAccept = 'image/*';
+      uploadBtnLabel = 'Upload Photo';
+      filterTabsHtml = `
+        <button class="btn btn-xs ${this.filterTab === 'image' || this.filterTab === 'compatible' ? 'btn-primary' : 'btn-secondary'}" data-filter="image" style="font-weight:700;">🖼️ Photos</button>
+        <button class="btn btn-xs ${this.filterTab === 'all' ? 'btn-primary' : 'btn-secondary'}" data-filter="all">All Library</button>
+      `;
+    } else if (this.targetType === 'video') {
+      modalTitle = `Select Video Asset ${slotTitle}`;
+      modalSubtitle = 'Choose an existing video highlight or upload a video clip';
+      uploadAccept = 'video/*';
+      uploadBtnLabel = 'Upload Video';
+      filterTabsHtml = `
+        <button class="btn btn-xs ${this.filterTab === 'video' || this.filterTab === 'compatible' ? 'btn-primary' : 'btn-secondary'}" data-filter="video" style="font-weight:700;">🎬 Videos</button>
+        <button class="btn btn-xs ${this.filterTab === 'all' ? 'btn-primary' : 'btn-secondary'}" data-filter="all">All Library</button>
+      `;
+    } else if (this.targetType === 'audio') {
+      modalTitle = `Select Audio Track ${slotTitle}`;
+      modalSubtitle = 'Choose background music or upload an audio track';
+      uploadAccept = 'audio/*';
+      uploadBtnLabel = 'Upload Audio';
+      filterTabsHtml = `
+        <button class="btn btn-xs ${this.filterTab === 'audio' || this.filterTab === 'compatible' ? 'btn-primary' : 'btn-secondary'}" data-filter="audio" style="font-weight:700;">🎵 Audio</button>
+        <button class="btn btn-xs ${this.filterTab === 'all' ? 'btn-primary' : 'btn-secondary'}" data-filter="all">All Library</button>
+      `;
+    } else {
+      filterTabsHtml = `
+        <button class="btn btn-xs ${this.filterTab === 'compatible' ? 'btn-primary' : 'btn-secondary'}" data-filter="compatible" style="font-weight:700;">✨ Compatible</button>
+        <button class="btn btn-xs ${this.filterTab === 'all' ? 'btn-primary' : 'btn-secondary'}" data-filter="all">All Library</button>
+        <button class="btn btn-xs ${this.filterTab === 'image' ? 'btn-primary' : 'btn-secondary'}" data-filter="image">Photos</button>
+        <button class="btn btn-xs ${this.filterTab === 'video' ? 'btn-primary' : 'btn-secondary'}" data-filter="video">Videos</button>
+        <button class="btn btn-xs ${this.filterTab === 'audio' ? 'btn-primary' : 'btn-secondary'}" data-filter="audio">Audio</button>
+      `;
+    }
+
     modal.innerHTML = `
       <div class="wizard-modal" style="max-width: 780px; width: 94vw; max-height: 88vh; padding: 20px; display: flex; flex-direction: column; background:var(--surface-elevated, #161325); border:1px solid var(--border, rgba(255,255,255,0.15));">
         <!-- Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
           <div>
             <h3 style="font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:8px; margin:0;">
-              <span>🖼️</span> <span>Select Media Asset ${slotTitle}</span>
+              <span>${this.targetType === 'video' ? '🎬' : (this.targetType === 'audio' ? '🎵' : '🖼️')}</span> <span>${modalTitle}</span>
             </h3>
             <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px; margin-bottom:0;">
-              ${targetSlot ? `${targetSlot.description} • Formats: ${(targetSlot.formats || ['Any']).join(', ').toUpperCase()}` : 'Choose from library or upload new files'}
+              ${modalSubtitle}
             </p>
           </div>
           <button class="btn btn-ghost btn-icon" id="btnCloseAssetPicker" style="font-size:1.1rem;">✕</button>
@@ -62,16 +106,12 @@ export class AssetPickerModal {
           <input type="text" class="form-input" id="inpAssetPickerSearch" placeholder="🔍 Search media by name, format, or tag..." style="flex:1; min-width:180px; font-size:0.82rem;" />
           
           <div class="picker-filter-tabs" style="display:flex; gap:3px;">
-            <button class="btn btn-xs ${this.filterTab === 'compatible' ? 'btn-primary' : 'btn-secondary'}" data-filter="compatible" style="font-weight:700;">✨ Compatible</button>
-            <button class="btn btn-xs ${this.filterTab === 'all' ? 'btn-primary' : 'btn-secondary'}" data-filter="all">All Library</button>
-            <button class="btn btn-xs ${this.filterTab === 'image' ? 'btn-primary' : 'btn-secondary'}" data-filter="image">Photos</button>
-            <button class="btn btn-xs ${this.filterTab === 'video' ? 'btn-primary' : 'btn-secondary'}" data-filter="video">Videos</button>
-            <button class="btn btn-xs ${this.filterTab === 'audio' ? 'btn-primary' : 'btn-secondary'}" data-filter="audio">Audio</button>
+            ${filterTabsHtml}
           </div>
 
           <label class="btn btn-primary btn-sm" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-weight:700; padding:6px 12px;">
-            <span>⬆️ Upload New</span>
-            <input type="file" id="inpModalAssetUpload" multiple accept="image/*,video/*,audio/*" style="display:none;" />
+            <span>⬆️ ${uploadBtnLabel}</span>
+            <input type="file" id="inpModalAssetUpload" multiple accept="${uploadAccept}" style="display:none;" />
           </label>
         </div>
 
@@ -293,6 +333,12 @@ export class AssetPickerModal {
             if (!this.allAssets.some(a => a.id === asset.id)) {
               this.allAssets.unshift(asset);
             }
+            if (this.project) {
+              if (!Array.isArray(this.project.assets)) this.project.assets = [];
+              if (!this.project.assets.some(a => a.id === asset.id)) {
+                this.project.assets.push(asset);
+              }
+            }
             lastUploaded = asset;
           } catch (err) {
             console.error('Error uploading file:', err);
@@ -305,7 +351,7 @@ export class AssetPickerModal {
         // If single file uploaded, check if immediately assignable
         if (files.length === 1 && lastUploaded) {
           const val = AssetCompatibilityValidator.validate(lastUploaded, this.targetScene, this.targetSlotId);
-          if (val.compatible) {
+          if (val.compatible || !this.targetSlotId) {
             this.onSelectAsset(lastUploaded);
             modal.remove();
           }

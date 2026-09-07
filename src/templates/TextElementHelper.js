@@ -88,15 +88,22 @@ export function getTextElementStyle(el) {
   const x = el.x || 0;
   const y = el.y || 0;
 
+  const fontFam = el.fontFamily || el.customFont;
+  const fontSize = el.fontSize !== undefined ? el.fontSize : el.customSize;
+  const fontWeight = el.fontWeight || el.customWeight;
+  const fontColor = el.color || el.customColor;
+  const textAlign = el.textAlign || el.align;
+  const letterSpacing = el.letterSpacing !== undefined ? el.letterSpacing : el.customLetterSpacing;
+
   const styles = [
     `display: ${vis ? 'inline-block' : 'none'}`,
-    el.customFont ? `font-family: ${el.customFont}` : '',
-    el.customSize ? `font-size: ${typeof el.customSize === 'number' ? `${el.customSize}px` : el.customSize}` : '',
-    el.customWeight ? `font-weight: ${el.customWeight}` : '',
-    el.customColor ? `color: ${el.customColor}` : '',
-    el.align && el.align !== 'center' ? `text-align: ${el.align}` : '',
-    el.customLineHeight ? `line-height: ${el.customLineHeight}` : '',
-    el.customLetterSpacing !== undefined ? `letter-spacing: ${typeof el.customLetterSpacing === 'number' ? `${el.customLetterSpacing}px` : el.customLetterSpacing}` : '',
+    fontFam ? `font-family: ${fontFam}` : '',
+    fontSize ? `font-size: ${typeof fontSize === 'number' ? `${fontSize}px` : fontSize}` : '',
+    fontWeight ? `font-weight: ${fontWeight}` : '',
+    fontColor ? `color: ${fontColor}` : '',
+    textAlign && textAlign !== 'center' ? `text-align: ${textAlign}` : '',
+    el.customLineHeight ? `line-height: ${el.customLineHeight}` : (el.lineHeight ? `line-height: ${el.lineHeight}` : ''),
+    letterSpacing !== undefined && letterSpacing !== 0 && letterSpacing !== '0px' ? `letter-spacing: ${typeof letterSpacing === 'number' ? `${letterSpacing}px` : letterSpacing}` : '',
     op,
     (x || y || rot) ? `transform: translate(${x}px, ${y}px) rotate(${rot}deg)` : '',
     el.width && el.width !== 'auto' ? `width: ${typeof el.width === 'number' ? `${el.width}px` : el.width}` : '',

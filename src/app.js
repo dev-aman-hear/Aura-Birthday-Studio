@@ -51,6 +51,7 @@ import './components/MediaViewerModal.js';
 
 export class BirthdayStudioApp {
   constructor() {
+    window.app = this;
     this.user = null;
     this.project = null;
     this.selectedSceneId = null;
@@ -231,6 +232,7 @@ export class BirthdayStudioApp {
     // 3. AUTOMATED TEST SUITE (#run-tests)
     if (cleanHash === '#run-tests') {
       const results = await TestRunner.runAllTests();
+      window.__testResults = results;
       document.body.innerHTML = `
         <div style="padding: 40px; background: #0f0e17; color: #fff; font-family: sans-serif; min-height: 100vh;">
           <h2>🧪 Celebration Studio 2.0 Complete Test Suite Verification</h2>
@@ -415,6 +417,7 @@ export class BirthdayStudioApp {
     // 2. Modern Space-Efficient Story Visual Editor Layout
     const modernEditor = new ModernEditorLayout({
       project: this.project,
+      activeSceneId: this.selectedSceneId,
       selectedSceneId: this.selectedSceneId,
       selectedElementId: this.selectedElementId,
       allAssets: this.allAssets,
@@ -680,7 +683,7 @@ export class BirthdayStudioApp {
 }
 
 // Global initialization
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   // Initialize Vercel Speed Insights safely
   try {
     if (typeof injectSpeedInsights === 'function') {
@@ -690,6 +693,14 @@ document.addEventListener('DOMContentLoaded', () => {
     console.debug('[Vercel Speed Insights] Init skipped:', e);
   }
   
-  const app = new BirthdayStudioApp();
-  app.start();
-});
+  if (!window.app) {
+    const app = new BirthdayStudioApp();
+    app.start();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

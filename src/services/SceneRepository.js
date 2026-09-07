@@ -14,12 +14,13 @@ class SceneRepository {
     return new Scene({
       id,
       name: data.name || 'New Scene',
-      template: data.template || 'hero',
+      template: data.template || 'basic_celebration',
       duration: data.duration || 6,
       assetIds: Array.isArray(data.assetIds) ? [...data.assetIds] : [],
       transition: data.transition || 'fade',
       settings: data.settings || {},
-      order: data.order || 1
+      order: data.order || 1,
+      ...data
     });
   }
 
@@ -117,20 +118,52 @@ class SceneRepository {
   /**
    * Reorder scenes in project sequence (Section 4, 6)
    */
-  reorderScenes(project, fromIndex, toIndex) {
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= project.scenes.length || toIndex >= project.scenes.length) {
-      return project;
+  reorderScenes(projectOrScenes, fromIndex, toIndex) {
+    const scenes = Array.isArray(projectOrScenes) ? projectOrScenes : projectOrScenes?.scenes;
+    if (!Array.isArray(scenes)) return projectOrScenes;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= scenes.length || toIndex >= scenes.length || fromIndex === toIndex) {
+      return projectOrScenes;
     }
-    const [moved] = project.scenes.splice(fromIndex, 1);
-    project.scenes.splice(toIndex, 0, moved);
-    this.reindexSceneOrders(project);
-    return project;
+    const [moved] = scenes.splice(fromIndex, 1);
+    scenes.splice(toIndex, 0, moved);
+    this.normalizeOrders(scenes);
+    return projectOrScenes;
   }
 
-  reindexSceneOrders(project) {
-    project.scenes.forEach((scene, index) => {
-      scene.order = index + 1;
-    });
+  /**
+   * Move a scene UP (swaps with previous scene).
+   * Returns true if swapped, false if already at top or invalid.
+   */
+  moveSceneUp(projectOrScenes, sceneId) {
+    const scenes = Array.isArray(projectOrScenes) ? projectOrScenes : projectOrScenes?.scenes;
+    if (!Array.isArray(scenes) || !sceneId) return false;
+    const index = scenes.findIndex(s => s.id === sceneId);
+    if (index <= 0) return false;
+    const [moved] = scenes.splice(index, 1);
+    scenes.splice(index - 1, 0, moved);
+    this.normalizeOrders(scenes);
+    return true;
+  }
+
+  /**
+   * Move a scene DOWN (swaps with next scene).
+   * Returns true if swapped, false if already at bottom or invalid.
+   */
+  moveSceneDown(projectOrScenes, sceneId) {
+    const scenes = Array.isArray(projectOrScenes) ? projectOrScenes : projectOrScenes?.scenes;
+    if (!Array.isArray(scenes) || !sceneId) return false;
+    const index = scenes.findIndex(s => s.id === sceneId);
+    if (index === -1 || index >= scenes.length - 1) return false;
+    const [moved] = scenes.splice(index, 1);
+    scenes.splice(index + 1, 0, moved);
+    this.normalizeOrders(scenes);
+    return true;
+  }
+
+  reindexSceneOrders(projectOrScenes) {
+    const scenes = Array.isArray(projectOrScenes) ? projectOrScenes : projectOrScenes?.scenes;
+    if (!Array.isArray(scenes)) return;
+    this.normalizeOrders(scenes);
   }
 }
 

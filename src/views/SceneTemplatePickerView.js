@@ -158,7 +158,7 @@ export class SceneTemplatePickerView {
         if (templateType === 'blank') {
           newScene = sceneRepository.createScene({
             name: 'New Scene',
-            template: 'hero',
+            template: 'basic_celebration',
             duration: 6
           });
         } else if (templateId) {

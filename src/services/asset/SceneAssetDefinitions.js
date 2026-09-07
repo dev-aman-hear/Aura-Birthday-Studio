@@ -5,6 +5,60 @@
  */
 
 export const SCENE_ASSET_DEFINITIONS = {
+  // 0. Basic Celebration (Pure Typography Text Scene)
+  basic_celebration: {
+    sceneType: 'basic_celebration',
+    name: 'Basic Celebration',
+    description: 'Clean typography celebration scene with title, subtitle, and badge',
+    icon: '🔤',
+    type: 'text/basic',
+    capabilities: { text: true, image: false, video: false, audio: false },
+    assets: { required: [], optional: [] },
+    requiredAssets: [],
+    optionalAssets: [],
+    assetRules: {},
+    slots: []
+  },
+  basic: {
+    sceneType: 'basic',
+    name: 'Basic Celebration',
+    description: 'Clean typography celebration scene with title, subtitle, and badge',
+    icon: '🔤',
+    type: 'text/basic',
+    capabilities: { text: true, image: false, video: false, audio: false },
+    assets: { required: [], optional: [] },
+    requiredAssets: [],
+    optionalAssets: [],
+    assetRules: {},
+    slots: []
+  },
+  text: {
+    sceneType: 'text',
+    name: 'Text Scene',
+    description: 'Clean text celebration scene',
+    icon: '🔤',
+    type: 'text/basic',
+    capabilities: { text: true, image: false, video: false, audio: false },
+    assets: { required: [], optional: [] },
+    requiredAssets: [],
+    optionalAssets: [],
+    assetRules: {},
+    slots: []
+  },
+  blank: {
+    sceneType: 'blank',
+    name: 'Basic Scene',
+    description: 'Clean text celebration scene',
+    icon: '🔤',
+    type: 'text/basic',
+    capabilities: { text: true, image: false, video: false, audio: false },
+    assets: { required: [], optional: [] },
+    requiredAssets: [],
+    optionalAssets: [],
+    assetRules: {},
+    slots: []
+  },
+
   // 1. Hero Opening
   hero: {
     sceneType: 'hero',
@@ -682,7 +736,18 @@ export class SceneAssetDefinitionService {
   /**
    * Retrieve machine-readable asset definition for any scene template
    */
-  static getDefinition(templateId = 'universal') {
+  static getDefinition(templateId = 'universal', scene = null) {
+    if (templateId === 'basic_celebration' || templateId === 'basic' || templateId === 'text' || templateId === 'blank') {
+      return SCENE_ASSET_DEFINITIONS.basic_celebration;
+    }
+    // If scene is provided, check if it's a basic text celebration scene
+    if (scene) {
+      const isTextScene = (scene.template === 'basic_celebration' || scene.template === 'basic' || scene.template === 'text' || scene.template === 'blank' ||
+        (scene.template === 'hero' && scene.name === 'New Scene' && !scene.slots?.hero_image && !scene.slots?.hero_photo && !scene.settings?.heroPhotoAssetId && !scene.settings?.photoAssetId && (!Array.isArray(scene.assetIds) || scene.assetIds.length === 0)));
+      if (isTextScene) {
+        return SCENE_ASSET_DEFINITIONS.basic_celebration;
+      }
+    }
     const key = (templateId || 'universal').replace('-', '_');
     return SCENE_ASSET_DEFINITIONS[templateId] || SCENE_ASSET_DEFINITIONS[key] || SCENE_ASSET_DEFINITIONS.universal;
   }
@@ -692,7 +757,13 @@ export class SceneAssetDefinitionService {
    */
   static getSlotsForScene(scene) {
     if (!scene) return [];
-    const def = this.getDefinition(scene.template);
+    if (scene.template === 'basic_celebration' || scene.template === 'basic' || scene.template === 'text' || scene.template === 'blank') {
+      return [];
+    }
+    if (scene.template === 'hero' && scene.name === 'New Scene' && !scene.slots?.hero_image && !scene.slots?.hero_photo && !scene.settings?.heroPhotoAssetId && !scene.settings?.photoAssetId && (!Array.isArray(scene.assetIds) || scene.assetIds.length === 0)) {
+      return [];
+    }
+    const def = this.getDefinition(scene.template, scene);
     return def.slots || [];
   }
 
@@ -701,7 +772,11 @@ export class SceneAssetDefinitionService {
    */
   static getMaxCapacity(scene) {
     if (!scene) return 15;
-    const def = this.getDefinition(scene.template);
+    if (scene.template === 'basic_celebration' || scene.template === 'basic' || scene.template === 'text' || scene.template === 'blank' ||
+        (scene.template === 'hero' && scene.name === 'New Scene' && !scene.slots?.hero_image && !scene.settings?.heroPhotoAssetId && !scene.settings?.photoAssetId && (!Array.isArray(scene.assetIds) || scene.assetIds.length === 0))) {
+      return 0;
+    }
+    const def = this.getDefinition(scene.template, scene);
     let totalMax = 0;
     if (def.slots) {
       def.slots.forEach(slot => {

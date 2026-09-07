@@ -20,8 +20,8 @@ export function renderRevealTemplate(scene, project, assets = []) {
       <div class="reveal-badge-pulse-wrapper">${renderTextElementHTML(scene, 'badge', defaultBadge, 'reveal-badge-pulse')}</div>
       <h2 class="reveal-heading-wrapper">${renderTextElementHTML(scene, 'title', titleText, 'reveal-heading')}</h2>
 
-      <div class="reveal-card">
-        <img src="${revealImage}" class="reveal-photo" alt="Reveal Photo" />
+      <div class="reveal-card" data-element-id="photo">
+        <img src="${revealImage}" class="reveal-photo" alt="Reveal Photo" data-element-id="photo" />
         <div class="reveal-text-overlay">
           <p class="reveal-text-p">${renderTextElementHTML(scene, 'subtitle', subtitleText, 'reveal-subtitle')}</p>
         </div>

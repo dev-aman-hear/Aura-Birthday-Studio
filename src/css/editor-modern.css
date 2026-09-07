@@ -232,10 +232,57 @@
   background: rgba(127, 90, 240, 0.15);
 }
 
+.rail-scene-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  gap: 2px;
+}
+
+.rail-scene-reorder-btns {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.rail-scene-card:hover .rail-scene-reorder-btns,
+.rail-scene-card:focus-within .rail-scene-reorder-btns {
+  opacity: 1;
+}
+
+.rail-reorder-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #aaa);
+  font-size: 0.55rem;
+  line-height: 1;
+  padding: 1px 2px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.rail-reorder-btn:hover:not(:disabled) {
+  color: var(--accent, #7f5af0);
+  background: rgba(127, 90, 240, 0.25);
+}
+
+.rail-reorder-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .rail-scene-num {
   font-size: 0.7rem;
   font-weight: 800;
   color: var(--text-muted);
+  line-height: 1;
 }
 
 .rail-scene-card.active .rail-scene-num {
@@ -253,20 +300,19 @@
 }
 
 .rail-scene-more-btn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
   background: transparent;
   border: none;
   color: var(--text-muted);
   font-size: 0.7rem;
-  padding: 0 3px;
+  padding: 0 2px;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease;
+  line-height: 1;
 }
 
-.rail-scene-card:hover .rail-scene-more-btn {
+.rail-scene-card:hover .rail-scene-more-btn,
+.rail-scene-card:focus-within .rail-scene-more-btn {
   opacity: 1;
 }
 
@@ -925,5 +971,53 @@
   height: 0 !important;
   background: transparent !important;
 }
+
+/* ==========================================================================
+   Contextual Inspector & Gallery Layout Styling
+   ========================================================================== */
+.inspector-media-preview-card {
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.inspector-media-preview-card:hover {
+  border-color: rgba(127, 90, 240, 0.4);
+}
+.gallery-slot-row {
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.gallery-slot-row:hover {
+  border-color: rgba(127, 90, 240, 0.35);
+}
+.universal-layer-row:hover {
+  background: var(--surface-hover, #201c36) !important;
+  border-color: var(--accent, #7f5af0) !important;
+}
+
+/* Gallery arrangement layouts */
+.gallery-grid.layout-masonry {
+  columns: 2;
+  column-gap: 12px;
+}
+.gallery-grid.layout-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+.gallery-grid.layout-carousel .gallery-card {
+  flex: 0 0 70%;
+  scroll-snap-align: center;
+}
+.gallery-grid.layout-stack {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  min-height: 220px;
+}
+.gallery-grid.layout-stack .gallery-card:nth-child(1) { transform: rotate(-5deg) translate(-10px, 0); z-index: 1; }
+.gallery-grid.layout-stack .gallery-card:nth-child(2) { transform: rotate(4deg) translate(10px, 0); z-index: 2; }
+.gallery-grid.layout-stack .gallery-card:nth-child(3) { transform: rotate(-2deg) translate(0, -10px); z-index: 3; }
+
 
 
