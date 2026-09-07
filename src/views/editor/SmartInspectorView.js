@@ -444,6 +444,45 @@ export class SmartInspectorView {
     return this.renderGenericControls(el, sc);
   }
 
+  renderFontFamilyOptions(currentFont = '') {
+    const cf = (currentFont || '').toLowerCase().replace(/['"]/g, '').trim();
+    const isSelected = (name) => cf.includes(name.toLowerCase());
+
+    return `
+      <optgroup label="✨ Romantic & Celebration Script">
+        <option value="'Great Vibes', cursive" ${isSelected('Great Vibes') ? 'selected' : ''} style="font-family: 'Great Vibes', cursive; font-size: 1.15rem;">Great Vibes (Romantic Calligraphy)</option>
+        <option value="'Dancing Script', cursive" ${isSelected('Dancing Script') ? 'selected' : ''} style="font-family: 'Dancing Script', cursive; font-size: 1.1rem;">Dancing Script (Joyful Celebration)</option>
+        <option value="'Alex Brush', cursive" ${isSelected('Alex Brush') ? 'selected' : ''} style="font-family: 'Alex Brush', cursive; font-size: 1.1rem;">Alex Brush (Flowing Script)</option>
+        <option value="'Pacifico', cursive" ${isSelected('Pacifico') ? 'selected' : ''} style="font-family: 'Pacifico', cursive; font-size: 1.05rem;">Pacifico (Playful Brush)</option>
+        <option value="'Caveat', cursive" ${isSelected('Caveat') ? 'selected' : ''} style="font-family: 'Caveat', cursive; font-size: 1.1rem;">Caveat (Personal Handwriting)</option>
+      </optgroup>
+
+      <optgroup label="👑 Royal & Cinematic Luxury">
+        <option value="'Cinzel Decorative', serif" ${isSelected('Cinzel Decorative') ? 'selected' : ''} style="font-family: 'Cinzel Decorative', serif; font-size: 1rem; font-weight: 700;">Cinzel Decorative (Imperial Swash)</option>
+        <option value="'Cinzel', serif" ${isSelected('Cinzel') && !isSelected('Decorative') ? 'selected' : ''} style="font-family: 'Cinzel', serif; font-size: 1rem;">Cinzel (Classic Roman Capital)</option>
+        <option value="'Italiana', serif" ${isSelected('Italiana') ? 'selected' : ''} style="font-family: 'Italiana', serif; font-size: 1.05rem;">Italiana (Haute Couture Luxury)</option>
+        <option value="'Playfair Display', serif" ${isSelected('Playfair') ? 'selected' : ''} style="font-family: 'Playfair Display', serif; font-size: 1rem;">Playfair Display (Editorial Serif)</option>
+        <option value="'Cormorant Garamond', serif" ${isSelected('Cormorant') ? 'selected' : ''} style="font-family: 'Cormorant Garamond', serif; font-size: 1.05rem;">Cormorant (Poetic Literature)</option>
+      </optgroup>
+
+      <optgroup label="🎉 Retro, Bold & Festive">
+        <option value="'Righteous', cursive" ${isSelected('Righteous') ? 'selected' : ''} style="font-family: 'Righteous', cursive; font-size: 1rem;">Righteous (80s Neon Party)</option>
+        <option value="'Abril Fatface', cursive" ${isSelected('Abril') ? 'selected' : ''} style="font-family: 'Abril Fatface', cursive; font-size: 1.05rem;">Abril Fatface (High-Impact Display)</option>
+        <option value="'Lobster', cursive" ${isSelected('Lobster') ? 'selected' : ''} style="font-family: 'Lobster', cursive; font-size: 1.05rem;">Lobster (Vintage Celebration)</option>
+        <option value="'Shrikhand', cursive" ${isSelected('Shrikhand') ? 'selected' : ''} style="font-family: 'Shrikhand', cursive; font-size: 1.05rem;">Shrikhand (Celebratory Curves)</option>
+        <option value="'Bebas Neue', sans-serif" ${isSelected('Bebas') ? 'selected' : ''} style="font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; letter-spacing: 1px;">Bebas Neue (Cinematic Headline)</option>
+      </optgroup>
+
+      <optgroup label="⚡ Modern & Clean">
+        <option value="'Space Grotesk', sans-serif" ${isSelected('Space Grotesk') ? 'selected' : ''} style="font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem;">Space Grotesk (Edgy Futuristic)</option>
+        <option value="'Outfit', sans-serif" ${isSelected('Outfit') || (!cf.includes('great vibes') && !cf.includes('dancing') && !cf.includes('alex') && !cf.includes('pacifico') && !cf.includes('caveat') && !cf.includes('cinzel') && !cf.includes('italiana') && !cf.includes('playfair') && !cf.includes('cormorant') && !cf.includes('righteous') && !cf.includes('abril') && !cf.includes('lobster') && !cf.includes('shrikhand') && !cf.includes('bebas') && !cf.includes('space') && !cf.includes('montserrat') && !cf.includes('poppins') && !cf.includes('inter')) ? 'selected' : ''} style="font-family: 'Outfit', sans-serif; font-size: 0.95rem;">Outfit (Warm Geometric)</option>
+        <option value="'Montserrat', sans-serif" ${isSelected('Montserrat') ? 'selected' : ''} style="font-family: 'Montserrat', sans-serif; font-size: 0.95rem;">Montserrat (Punchy Bold)</option>
+        <option value="'Poppins', sans-serif" ${isSelected('Poppins') ? 'selected' : ''} style="font-family: 'Poppins', sans-serif; font-size: 0.95rem;">Poppins (Friendly Rounded)</option>
+        <option value="'Inter', sans-serif" ${isSelected('Inter') ? 'selected' : ''} style="font-family: 'Inter', sans-serif; font-size: 0.95rem;">Inter (Minimalist Clean)</option>
+      </optgroup>
+    `;
+  }
+
   renderTextControls(el, scene) {
     const isLocked = this.isLayoutLocked(scene);
 
@@ -466,14 +505,8 @@ export class SmartInspectorView {
         <div class="inspector-section-title">Typography & Style</div>
         <div class="form-group" style="margin-bottom:8px;">
           <label style="font-size:0.75rem;">Font Family</label>
-          <select class="form-input" id="inspFontFamily">
-            <option value="'Playfair Display', serif" ${(el.fontFamily || '').toLowerCase().includes('playfair') ? 'selected' : ''}>Playfair Display (Luxury)</option>
-            <option value="'Outfit', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('outfit') ? 'selected' : ''}>Outfit (Modern)</option>
-            <option value="'Cinzel', serif" ${(el.fontFamily || '').toLowerCase().includes('cinzel') ? 'selected' : ''}>Cinzel (Cinematic)</option>
-            <option value="'Poppins', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('poppins') ? 'selected' : ''}>Poppins (Friendly)</option>
-            <option value="'Montserrat', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('montserrat') ? 'selected' : ''}>Montserrat (Bold)</option>
-            <option value="'Pacifico', cursive" ${(el.fontFamily || '').toLowerCase().includes('pacifico') ? 'selected' : ''}>Pacifico (Handwritten)</option>
-            <option value="'Inter', sans-serif" ${(el.fontFamily || '').toLowerCase().includes('inter') || (!(el.fontFamily || '').toLowerCase().includes('playfair') && !(el.fontFamily || '').toLowerCase().includes('outfit') && !(el.fontFamily || '').toLowerCase().includes('cinzel') && !(el.fontFamily || '').toLowerCase().includes('poppins') && !(el.fontFamily || '').toLowerCase().includes('montserrat') && !(el.fontFamily || '').toLowerCase().includes('pacifico')) ? 'selected' : ''}>Inter (Clean)</option>
+          <select class="form-input" id="inspFontFamily" style="font-family:${el.fontFamily || "'Outfit', sans-serif"};">
+            ${this.renderFontFamilyOptions(el.fontFamily)}
           </select>
         </div>
 
@@ -1673,13 +1706,8 @@ export class SmartInspectorView {
         <div class="inspector-section-title">Typography & Styling</div>
         <div class="form-group" style="margin-bottom:8px;">
           <label style="font-size:0.72rem; color:var(--text-muted);">Font Style</label>
-          <select class="form-input" id="inspTextSceneFontFamily">
-            <option value="'Playfair Display', serif" ${fontFamily.includes('Playfair') ? 'selected' : ''}>Playfair Display (Luxury & Elegant)</option>
-            <option value="'Outfit', sans-serif" ${fontFamily.includes('Outfit') ? 'selected' : ''}>Outfit (Modern & Clean)</option>
-            <option value="'Cinzel', serif" ${fontFamily.includes('Cinzel') ? 'selected' : ''}>Cinzel (Cinematic & Grand)</option>
-            <option value="'Poppins', sans-serif" ${fontFamily.includes('Poppins') ? 'selected' : ''}>Poppins (Friendly & Warm)</option>
-            <option value="'Pacifico', cursive" ${fontFamily.includes('Pacifico') ? 'selected' : ''}>Pacifico (Handwritten Flourish)</option>
-            <option value="'Inter', sans-serif" ${fontFamily.includes('Inter') ? 'selected' : ''}>Inter (Minimalist)</option>
+          <select class="form-input" id="inspTextSceneFontFamily" style="font-family:${fontFamily || "'Outfit', sans-serif"};">
+            ${this.renderFontFamilyOptions(fontFamily)}
           </select>
         </div>
 
@@ -2262,9 +2290,10 @@ export class SmartInspectorView {
 
         // Contextual Text Scene Controls
         if (e.target.id === 'inspTextSceneFontFamily') {
+          e.target.style.fontFamily = e.target.value;
           targetScene.settings.fontFamily = e.target.value;
-          const el = this.getElementsList(targetScene).find(x => x.id === 'subtitle' || x.id === 'message');
-          if (el) el.fontFamily = e.target.value;
+          const elements = this.getElementsList(targetScene).filter(x => x.type === 'text' || x.id === 'title' || x.id === 'subtitle' || x.id === 'message');
+          elements.forEach(el => { el.fontFamily = e.target.value; });
           notifyChange();
         }
         if (e.target.id === 'inspTextSceneFontSize') {
@@ -3235,6 +3264,7 @@ export class SmartInspectorView {
       }
 
       if (e.target.id === 'inspFontFamily') {
+        e.target.style.fontFamily = e.target.value;
         updateElementProp(activeEl.id, { fontFamily: e.target.value });
       }
       if (e.target.id === 'inspFontWeight') {

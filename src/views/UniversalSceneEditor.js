@@ -183,13 +183,35 @@ export class UniversalSceneEditor {
           <div class="form-row">
             <div class="form-group">
               <label>Font Family</label>
-              <select class="form-input" id="edElFontFamily">
-                <option value="Outfit, sans-serif" ${el.fontFamily?.includes('Outfit') ? 'selected' : ''}>Outfit (Modern)</option>
-                <option value="Inter, sans-serif" ${el.fontFamily?.includes('Inter') ? 'selected' : ''}>Inter (Sans)</option>
-                <option value="Playfair Display, serif" ${el.fontFamily?.includes('Playfair') ? 'selected' : ''}>Playfair (Serif)</option>
-                <option value="Cinzel, serif" ${el.fontFamily?.includes('Cinzel') ? 'selected' : ''}>Cinzel (Classic)</option>
-                <option value="Great Vibes, cursive" ${el.fontFamily?.includes('Great Vibes') ? 'selected' : ''}>Great Vibes (Cursive)</option>
-                <option value="Montserrat, sans-serif" ${el.fontFamily?.includes('Montserrat') ? 'selected' : ''}>Montserrat (Bold)</option>
+              <select class="form-input" id="edElFontFamily" style="font-family:${el.fontFamily || 'Outfit, sans-serif'};">
+                <optgroup label="✨ Romantic & Celebration Script">
+                  <option value="'Great Vibes', cursive" ${el.fontFamily?.includes('Great Vibes') ? 'selected' : ''} style="font-family:'Great Vibes', cursive; font-size:1.15rem;">Great Vibes (Romantic Calligraphy)</option>
+                  <option value="'Dancing Script', cursive" ${el.fontFamily?.includes('Dancing Script') ? 'selected' : ''} style="font-family:'Dancing Script', cursive; font-size:1.1rem;">Dancing Script (Joyful Celebration)</option>
+                  <option value="'Alex Brush', cursive" ${el.fontFamily?.includes('Alex Brush') ? 'selected' : ''} style="font-family:'Alex Brush', cursive; font-size:1.1rem;">Alex Brush (Flowing Script)</option>
+                  <option value="'Pacifico', cursive" ${el.fontFamily?.includes('Pacifico') ? 'selected' : ''} style="font-family:'Pacifico', cursive; font-size:1.05rem;">Pacifico (Playful Brush)</option>
+                  <option value="'Caveat', cursive" ${el.fontFamily?.includes('Caveat') ? 'selected' : ''} style="font-family:'Caveat', cursive; font-size:1.1rem;">Caveat (Personal Handwriting)</option>
+                </optgroup>
+                <optgroup label="👑 Royal & Cinematic Luxury">
+                  <option value="'Cinzel Decorative', serif" ${el.fontFamily?.includes('Cinzel Decorative') ? 'selected' : ''} style="font-family:'Cinzel Decorative', serif; font-size:1rem; font-weight:700;">Cinzel Decorative (Imperial Swash)</option>
+                  <option value="'Cinzel', serif" ${el.fontFamily?.includes('Cinzel') && !el.fontFamily?.includes('Decorative') ? 'selected' : ''} style="font-family:'Cinzel', serif; font-size:1rem;">Cinzel (Classic Roman Capital)</option>
+                  <option value="'Italiana', serif" ${el.fontFamily?.includes('Italiana') ? 'selected' : ''} style="font-family:'Italiana', serif; font-size:1.05rem;">Italiana (Haute Couture Luxury)</option>
+                  <option value="'Playfair Display', serif" ${el.fontFamily?.includes('Playfair') ? 'selected' : ''} style="font-family:'Playfair Display', serif; font-size:1rem;">Playfair Display (Editorial Serif)</option>
+                  <option value="'Cormorant Garamond', serif" ${el.fontFamily?.includes('Cormorant') ? 'selected' : ''} style="font-family:'Cormorant Garamond', serif; font-size:1.05rem;">Cormorant (Poetic Literature)</option>
+                </optgroup>
+                <optgroup label="🎉 Retro, Bold & Festive">
+                  <option value="'Righteous', cursive" ${el.fontFamily?.includes('Righteous') ? 'selected' : ''} style="font-family:'Righteous', cursive; font-size:1rem;">Righteous (80s Neon Party)</option>
+                  <option value="'Abril Fatface', cursive" ${el.fontFamily?.includes('Abril') ? 'selected' : ''} style="font-family:'Abril Fatface', cursive; font-size:1.05rem;">Abril Fatface (High-Impact Display)</option>
+                  <option value="'Lobster', cursive" ${el.fontFamily?.includes('Lobster') ? 'selected' : ''} style="font-family:'Lobster', cursive; font-size:1.05rem;">Lobster (Vintage Celebration)</option>
+                  <option value="'Shrikhand', cursive" ${el.fontFamily?.includes('Shrikhand') ? 'selected' : ''} style="font-family:'Shrikhand', cursive; font-size:1.05rem;">Shrikhand (Celebratory Curves)</option>
+                  <option value="'Bebas Neue', sans-serif" ${el.fontFamily?.includes('Bebas') ? 'selected' : ''} style="font-family:'Bebas Neue', sans-serif; font-size:1.15rem; letter-spacing:1px;">Bebas Neue (Cinematic Headline)</option>
+                </optgroup>
+                <optgroup label="⚡ Modern & Clean">
+                  <option value="'Space Grotesk', sans-serif" ${el.fontFamily?.includes('Space Grotesk') ? 'selected' : ''} style="font-family:'Space Grotesk', sans-serif; font-size:0.95rem;">Space Grotesk (Edgy Futuristic)</option>
+                  <option value="'Outfit', sans-serif" ${el.fontFamily?.includes('Outfit') ? 'selected' : ''} style="font-family:'Outfit', sans-serif; font-size:0.95rem;">Outfit (Warm Geometric)</option>
+                  <option value="'Montserrat', sans-serif" ${el.fontFamily?.includes('Montserrat') ? 'selected' : ''} style="font-family:'Montserrat', sans-serif; font-size:0.95rem;">Montserrat (Punchy Bold)</option>
+                  <option value="'Poppins', sans-serif" ${el.fontFamily?.includes('Poppins') ? 'selected' : ''} style="font-family:'Poppins', sans-serif; font-size:0.95rem;">Poppins (Friendly Rounded)</option>
+                  <option value="'Inter', sans-serif" ${el.fontFamily?.includes('Inter') ? 'selected' : ''} style="font-family:'Inter', sans-serif; font-size:0.95rem;">Inter (Minimalist Clean)</option>
+                </optgroup>
               </select>
             </div>
 

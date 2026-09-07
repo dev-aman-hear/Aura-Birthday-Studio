@@ -223,7 +223,7 @@ export class UniversalSceneRenderer {
           const isSubtitleOrBody = el.role === 'subtitle' || el.role === 'body' || el.role === 'description' || el.role === 'message' || (!el.role && (el.name?.toLowerCase().includes('sub') || el.name?.toLowerCase().includes('desc') || el.name?.toLowerCase().includes('msg') || el.name?.toLowerCase().includes('message')));
 
           let font = el.customFont || el.fontFamily;
-          if (!font || font === 'inherit' || font.includes('sans-serif') || font.includes('serif')) {
+          if (!font || font === 'inherit' || font.trim() === 'sans-serif' || font.trim() === 'serif') {
             font = isSubtitleOrBody
               ? (style?.typography?.bodyFont || "'Inter', sans-serif")
               : (style?.typography?.headingFont || "'Outfit', sans-serif");
