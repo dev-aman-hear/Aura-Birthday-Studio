@@ -501,6 +501,14 @@
   text-align: center;
 }
 
+.wish-wall-action-bar {
+  margin-bottom: 64px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 10;
+}
+
 .leave-wish-trigger-btn {
   display: inline-flex;
   align-items: center;

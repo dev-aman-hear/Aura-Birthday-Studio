@@ -226,8 +226,8 @@ export class RecipientPlayerView {
         </button>
       </div>
 
-      <!-- Golden Bottom Navigation: Next Scene Button (Appears when scene ends, customizable) -->
-      <div class="recipient-bottom-nav-container" id="recBottomNavContainer" style="display:none;">
+      <!-- Golden Bottom Navigation: Next Scene Button (Customizable per scene, edge-anchored & always accessible) -->
+      <div class="recipient-bottom-nav-container is-visible" id="recBottomNavContainer">
         <button class="recipient-golden-next-btn theme-royal-gold" id="btnRecBottomNext" type="button" aria-label="Next Scene">
           <span class="golden-btn-text" id="recNextBtnText">Next Scene ✨</span>
           <svg class="golden-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -377,9 +377,9 @@ export class RecipientPlayerView {
 
     const root = document.getElementById('recipientStandaloneRoot');
     if (root) {
-      this.hideBottomNextButton(root, true);
       this.renderSceneContent(root, this.scenes[index]);
       this.updateControls(root);
+      this.showBottomNextButton(root);
     }
 
     const durationSec = Math.max(2, this.scenes[index].duration || 6);
@@ -389,17 +389,11 @@ export class RecipientPlayerView {
     this.isPausedForModal = false;
 
     const isLast = this.currentSceneIndex >= this.scenes.length - 1;
-    const settings = this.scenes[index].settings || {};
-    const timing = settings.nextButtonTiming || 'on-scene-end';
 
-    // When the scene ends, the golden Next button appears at the bottom of the scene
-    if (timing === 'always') {
-      this.showBottomNextButton(root);
-    } else {
-      this.nextButtonTimer = setTimeout(() => {
-        this.showBottomNextButton();
-      }, this.currentSceneDurationMs);
-    }
+    // Trigger golden pulse celebratory highlight when scene duration concludes
+    this.nextButtonTimer = setTimeout(() => {
+      this.pulseBottomNextButton();
+    }, this.currentSceneDurationMs);
 
     if (isLast && this.isPlaying) {
       // Final scene: stop active progression once duration finishes
@@ -415,9 +409,19 @@ export class RecipientPlayerView {
     const container = targetRoot.querySelector('#recBottomNavContainer');
     if (container) {
       container.style.display = 'flex';
+      container.classList.remove('scene-ended-pulse');
       requestAnimationFrame(() => {
         container.classList.add('is-visible');
       });
+    }
+  }
+
+  pulseBottomNextButton(root) {
+    const targetRoot = root || document.getElementById('recipientStandaloneRoot') || document;
+    const container = targetRoot.querySelector('#recBottomNavContainer');
+    if (container) {
+      container.style.display = 'flex';
+      container.classList.add('is-visible', 'scene-ended-pulse');
     }
   }
 
@@ -425,7 +429,7 @@ export class RecipientPlayerView {
     const targetRoot = root || document.getElementById('recipientStandaloneRoot') || document;
     const container = targetRoot.querySelector('#recBottomNavContainer');
     if (container) {
-      container.classList.remove('is-visible');
+      container.classList.remove('is-visible', 'scene-ended-pulse');
       if (immediate) {
         container.style.display = 'none';
       } else {
@@ -465,17 +469,10 @@ export class RecipientPlayerView {
     this.currentSceneDurationMs = this.remainingSceneDurationMs;
 
     const isLast = this.currentSceneIndex >= this.scenes.length - 1;
-    const activeScene = this.scenes[this.currentSceneIndex];
-    const timing = activeScene?.settings?.nextButtonTiming || 'on-scene-end';
-    const root = document.getElementById('recipientStandaloneRoot');
-
-    if (timing === 'always') {
-      this.showBottomNextButton(root);
-    } else {
-      this.nextButtonTimer = setTimeout(() => {
-        this.showBottomNextButton();
-      }, this.remainingSceneDurationMs);
-    }
+    this.showBottomNextButton(root);
+    this.nextButtonTimer = setTimeout(() => {
+      this.pulseBottomNextButton();
+    }, this.remainingSceneDurationMs);
 
     if (isLast && this.isPlaying) {
       this.sceneTimer = setTimeout(() => {
@@ -558,7 +555,7 @@ export class RecipientPlayerView {
       }
     }
 
-    if (timing === 'always' && container) {
+    if (container) {
       container.style.display = 'flex';
       requestAnimationFrame(() => container.classList.add('is-visible'));
     }

@@ -11,6 +11,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(16px, 4cqi, 40px);
+  padding-bottom: clamp(72px, 12vh, 96px) !important;
   position: relative;
   overflow: hidden;
   text-align: center;

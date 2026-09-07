@@ -2137,8 +2137,8 @@ export class SmartInspectorView {
             <div class="form-group" style="margin:0;">
               <label style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px; display:block;">Appearance</label>
               <select class="form-input" id="inspNextBtnTiming">
-                <option value="on-scene-end" ${nextTiming === 'on-scene-end' || !nextTiming ? 'selected' : ''}>When Scene Ends</option>
-                <option value="always" ${nextTiming === 'always' ? 'selected' : ''}>Show Immediately</option>
+                <option value="always" ${nextTiming !== 'on-scene-end' ? 'selected' : ''}>Show Immediately (Default)</option>
+                <option value="on-scene-end" ${nextTiming === 'on-scene-end' ? 'selected' : ''}>Pulse on Scene End</option>
               </select>
             </div>
           </div>
