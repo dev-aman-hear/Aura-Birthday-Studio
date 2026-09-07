@@ -3,6 +3,7 @@
 # 🎂 Aura Birthday Studio
 ### *Craft Cinematic, Animated Celebration Stories & Interactive Wish Websites*
 
+[![Release](https://img.shields.io/badge/Release-v2.0-gold?style=for-the-badge&logo=sparkles)](https://github.com/dev-aman-hear/Aura-Birthday-Studio/releases/tag/v2)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![JavaScript](https://img.shields.io/badge/Vanilla_ES_Modules-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![GSAP](https://img.shields.io/badge/Animations-GSAP_3.12-88CE02?style=for-the-badge&logo=greensock&logoColor=black)](https://greensock.com/gsap/)
@@ -13,11 +14,20 @@
   <b>Aura Birthday Studio</b> is an all-in-one, zero-dependency web platform designed to create stunning, animated celebration websites and digital memory stories for <b>Birthdays, Weddings, Anniversaries, Graduations, Thanksgiving, Farewells, and Special Milestones</b> in minutes.
 </p>
 
-[✨ Live Features](#-key-features) • [🚀 Quick Start](#-quick-start) • [🎭 Scene Templates](#-scene-templates) • [🏗️ Architecture](#%EF%B8%8F-project-architecture) • [🚢 Deployment](#-deployment) • [📄 License](#-license)
+[🌟 What's New in v2](#-whats-new-in-v2) • [✨ Live Features](#-key-features) • [🚀 Quick Start](#-quick-start) • [🎭 Scene Templates](#-scene-templates) • [🏗️ Architecture](#%EF%B8%8F-project-architecture) • [🚢 Deployment](#-deployment) • [📄 License](#-license)
 
 ---
 
 </div>
+
+## 🌟 What's New in v2
+
+- **✨ Customizable Golden Bottom Next Button**: Replaced floating side arrows in published celebration links with an elegant, centered golden button at the bottom of each scene. It smoothly animates in when the scene ends, prompting the recipient to proceed when ready.
+- **🎨 Luxury Gold Themes & Full Customization**: Choose between *Royal Gold*, *Champagne Gold*, *Rose Gold*, *Amber Gold*, or custom color pickers, along with customizable button labels and appearance timing (*On Scene End* or *Always Visible*).
+- **🔒 Zero-Drift Multi-Scene Inspector Architecture**: Complete architectural overhaul ensuring `selectedSceneId` and `selectedElementId` are always resolved together in strict lockstep, eliminating any cross-scene property drift or inspector reversion.
+- **⏱️ Precision Modal & Audio Resumption**: Seamless pause and resume synchronization when opening community wish forms, surprise gifts, or interactive elements during scene playback.
+
+---
 
 ## 🌟 Overview
 
